@@ -7,6 +7,7 @@ type SettlementRow = {
   x: number;
   z: number;
   nation_name: string | null;
+  discord: string | null;
 };
 
 export default async function SettlementsPage() {
@@ -16,7 +17,7 @@ export default async function SettlementsPage() {
   try {
     const supabase = createSupabase();
     const { data, error } = await supabase
-      .from("cities_readonly")
+      .from("settlements_readonly")
       .select("*")
       .order("settlement_name", { ascending: true });
 
@@ -61,12 +62,13 @@ export default async function SettlementsPage() {
                   <th className="py-2 pr-4">Name</th>
                   <th className="py-2 pr-4">Nation</th>
                   <th className="py-2 pr-4">Coordinates</th>
+                  <th className="py-2 pr-4">Discord</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={3}>No settlements found.</td>
+                    <td className="py-3 text-muted-foreground" colSpan={4}>No settlements found.</td>
                   </tr>
                 ) : (
                   rows.map((c) => (
@@ -74,6 +76,7 @@ export default async function SettlementsPage() {
                       <td className="py-2 pr-4">{c.settlement_name}</td>
                       <td className="py-2 pr-4">{c.nation_name}</td>
                       <td className="py-2 pr-4">({c.x}, {c.z})</td>
+                      <td className="py-2 pr-4">{c.discord ?? "-"}</td>
                     </tr>
                   ))
                 )}

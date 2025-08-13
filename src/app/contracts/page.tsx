@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
+import CreateContract from "./create-contract";
 
 export default function ContractsPage() {
   return (
@@ -22,7 +23,6 @@ export default function ContractsPage() {
               <option>Construction</option>
               <option>Logistics</option>
             </select>
-            <button className="h-9 rounded-md border px-3">New contract</button>
           </div>
           <div className="p-4">
             <div className="text-sm text-muted-foreground">No contracts yet. Connect API later.</div>
@@ -55,6 +55,7 @@ export default function ContractsPage() {
           </div>
         </div>
       </Suspense>
+      <CreateContract />
     </div>
   );
 } 

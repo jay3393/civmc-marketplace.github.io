@@ -44,13 +44,21 @@ type ContractInsert = {
   budget_currency_id: string;
   deadline: string | null;
   deadline_asap: boolean;
-  // nation_id handled server-side; optional client side for now
   settlement_id: number | null;
+  created_by: string;
 };
 
 type Currency = { id: string; name: string };
 
 type SettlementOpt = { id: number; settlement_name: string };
+
+type DiscordUserMetadata = {
+  provider_id?: string;
+  sub?: string;
+  user_name?: string;
+  avatar_url?: string;
+  [key: string]: unknown;
+};
 
 async function loadCurrencies(): Promise<Currency[]> {
   const sb = createSupabase();
@@ -83,7 +91,7 @@ export default function CreateContract() {
     budget_amount: "",
     budget_currency_id: "",
     deadline: "",
-    deadline_asap: false,
+    deadline_asap: true,
     settlement_id: "",
     description: "",
   });
@@ -99,11 +107,31 @@ export default function CreateContract() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  async function resolveCreatedById(): Promise<string> {
+    const sb = createSupabase();
+    const { data: userData } = await sb.auth.getUser();
+    const user = userData?.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const { data: profById } = await sb.from("profiles").select("id").eq("id", user.id).limit(1).maybeSingle();
+    if (profById?.id) return profById.id as string;
+
+    const meta = (user.user_metadata ?? {}) as DiscordUserMetadata;
+    const discordId = meta.provider_id || meta.sub || null;
+    if (discordId) {
+      const { data: profByDiscord } = await sb.from("profiles").select("id").eq("discord_user_id", String(discordId)).limit(1).maybeSingle();
+      if (profByDiscord?.id) return profByDiscord.id as string;
+    }
+
+    throw new Error("Profile not found for user");
+  }
+
   async function onSubmit() {
     setError(null);
     setSuccess(null);
     startTransition(async () => {
       try {
+        const createdBy = await resolveCreatedById();
         const supabase = createSupabase();
         const payload: ContractInsert = {
           title: form.title.trim(),
@@ -115,6 +143,7 @@ export default function CreateContract() {
           deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
           deadline_asap: form.deadline_asap,
           settlement_id: form.settlement_id ? Number(form.settlement_id) : null,
+          created_by: createdBy,
         };
 
         const { error: insertError } = await supabase.from("contracts").insert(payload);
@@ -252,8 +281,8 @@ export default function CreateContract() {
                         : "Select settlement"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm" align="start">
-                    <Command filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
+                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm max-h-72 overflow-auto" align="start">
+                    <Command className="max-h-64" filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
                       <CommandInput placeholder="Search settlements..." />
                       <CommandEmpty>No settlements found.</CommandEmpty>
                       <CommandGroup>

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { createSupabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -27,6 +26,14 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 
 type ContractInsert = {
   title: string;
@@ -37,13 +44,38 @@ type ContractInsert = {
   budget_currency_id: string;
   deadline: string | null;
   deadline_asap: boolean;
-  nation_id: number;
+  // nation_id handled server-side; optional client side for now
   settlement_id: number | null;
 };
+
+type Currency = { id: string; name: string };
+
+type SettlementOpt = { id: number; settlement_name: string };
+
+async function loadCurrencies(): Promise<Currency[]> {
+  const sb = createSupabase();
+  const { data, error } = await sb.from("currencies").select("id,name").order("name");
+  if (error) {
+    console.error("Failed to load currencies", { error });
+    throw new Error("Failed to load currencies.");
+  }
+  return (data ?? []) as Currency[];
+}
+
+async function loadSettlements(): Promise<SettlementOpt[]> {
+  const sb = createSupabase();
+  const { data, error } = await sb.from("settlements").select("id,settlement_name").order("settlement_name");
+  if (error) {
+    console.error("Failed to load settlements", { error });
+    throw new Error("Failed to load settlements.");
+  }
+  return (data ?? []) as SettlementOpt[];
+}
 
 export default function CreateContract() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     title: "",
     type: "request" as "request" | "offer",
@@ -52,7 +84,6 @@ export default function CreateContract() {
     budget_currency_id: "",
     deadline: "",
     deadline_asap: false,
-    nation_id: "",
     settlement_id: "",
     description: "",
   });
@@ -60,6 +91,9 @@ export default function CreateContract() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const parsedDeadline = useMemo(() => (form.deadline ? new Date(form.deadline) : undefined), [form.deadline]);
+
+  const { data: currencies } = useQuery({ queryKey: ["currencies"], queryFn: loadCurrencies });
+  const { data: settlements } = useQuery({ queryKey: ["settlements:options"], queryFn: loadSettlements });
 
   function onChange<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -80,7 +114,6 @@ export default function CreateContract() {
           budget_currency_id: form.budget_currency_id,
           deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
           deadline_asap: form.deadline_asap,
-          nation_id: Number(form.nation_id),
           settlement_id: form.settlement_id ? Number(form.settlement_id) : null,
         };
 
@@ -92,6 +125,7 @@ export default function CreateContract() {
         }
         setSuccess("Contract created.");
         setOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["contracts"], exact: false });
       } catch (e) {
         console.error("Unexpected error creating contract", e);
         setError("Could not create contract. Please try again.");
@@ -193,19 +227,53 @@ export default function CreateContract() {
                 <Input id="budget_amount" type="number" min="0" step="0.01" value={form.budget_amount} onChange={(e) => onChange("budget_amount", e.target.value)} />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="budget_currency_id">Currency ID (UUID)</Label>
-                <Input id="budget_currency_id" value={form.budget_currency_id} onChange={(e) => onChange("budget_currency_id", e.target.value)} />
+                <Label>Currency</Label>
+                <Select value={form.budget_currency_id} onValueChange={(v) => onChange("budget_currency_id", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={currencies && currencies.length ? "Select currency" : "Loading…"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-1.5">
-                <Label htmlFor="nation_id">Nation ID</Label>
-                <Input id="nation_id" value={form.nation_id} onChange={(e) => onChange("nation_id", e.target.value)} />
+                <Label>Settlement (optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between">
+                      {form.settlement_id
+                        ? settlements?.find((s) => String(s.id) === String(form.settlement_id))?.settlement_name ?? "Select settlement"
+                        : "Select settlement"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm" align="start">
+                    <Command filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
+                      <CommandInput placeholder="Search settlements..." />
+                      <CommandEmpty>No settlements found.</CommandEmpty>
+                      <CommandGroup>
+                        {settlements?.map((s) => (
+                          <CommandItem
+                            key={s.id}
+                            value={s.settlement_name}
+                            onSelect={() => onChange("settlement_id", String(s.id))}
+                          >
+                            {s.settlement_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="settlement_id">Settlement ID (optional)</Label>
-                <Input id="settlement_id" value={form.settlement_id} onChange={(e) => onChange("settlement_id", e.target.value)} />
+              <div className="grid gap-1.5 opacity-60">
+                <Label htmlFor="nation_id">Nation (server-set)</Label>
+                <Input id="nation_id" value="" placeholder="Set on server" disabled />
               </div>
             </div>
 
@@ -243,7 +311,12 @@ export default function CreateContract() {
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button
               onClick={onSubmit}
-              disabled={isPending || !form.title || !form.budget_amount || !form.budget_currency_id || !form.nation_id}
+              disabled={
+                isPending ||
+                !form.title ||
+                !form.budget_amount ||
+                !form.budget_currency_id
+              }
             >
               {isPending ? "Creating…" : "Create"}
             </Button>

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createSupabase } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 
 export function useSupabaseUser() {
   const [user, setUser] = useState<null | { id: string; email?: string | null; user_metadata?: Record<string, unknown> }>(null);
   useEffect(() => {
-    const sb = createSupabase();
+    const sb = getSupabaseBrowser();
     sb.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
     return () => {
@@ -33,7 +33,7 @@ export default function AuthButton() {
   async function signInWithDiscord() {
     try {
       setLoading(true);
-      const sb = createSupabase();
+      const sb = getSupabaseBrowser();
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
       const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
       if (error) {
@@ -47,8 +47,9 @@ export default function AuthButton() {
   }
 
   async function signOut() {
-    const sb = createSupabase();
+    const sb = getSupabaseBrowser();
     await sb.auth.signOut();
+    if (typeof window !== "undefined") window.location.reload();
   }
 
   if (!emailOrUsername) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { createSupabase } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,7 +61,7 @@ type DiscordUserMetadata = {
 };
 
 async function loadCurrencies(): Promise<Currency[]> {
-  const sb = createSupabase();
+  const sb = getSupabaseBrowser();
   const { data, error } = await sb.from("currencies").select("id,name").order("name");
   if (error) {
     console.error("Failed to load currencies", { error });
@@ -71,7 +71,7 @@ async function loadCurrencies(): Promise<Currency[]> {
 }
 
 async function loadSettlements(): Promise<SettlementOpt[]> {
-  const sb = createSupabase();
+  const sb = getSupabaseBrowser();
   const { data, error } = await sb.from("settlements").select("id,settlement_name").order("settlement_name");
   if (error) {
     console.error("Failed to load settlements", { error });
@@ -108,7 +108,7 @@ export default function CreateContract() {
   }
 
   async function resolveCreatedById(): Promise<string> {
-    const sb = createSupabase();
+    const sb = getSupabaseBrowser();
     const { data: userData } = await sb.auth.getUser();
     const user = userData?.user;
     if (!user) throw new Error("Not authenticated");
@@ -132,7 +132,7 @@ export default function CreateContract() {
     startTransition(async () => {
       try {
         const createdBy = await resolveCreatedById();
-        const supabase = createSupabase();
+        const supabase = getSupabaseBrowser();
         const payload: ContractInsert = {
           title: form.title.trim(),
           type: form.type,

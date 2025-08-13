@@ -34,11 +34,11 @@ export default function EventsPage() {
             </thead>
             <tbody>
               <tr className="border-b">
-                <td className="py-2 pr-4">Summer Games</td>
-                <td className="py-2 pr-4">ExampleNation</td>
-                <td className="py-2 pr-4">2025-07-15</td>
+                <td className="py-2 pr-4">Wedding Ceremony</td>
+                <td className="py-2 pr-4">femyboysilly</td>
+                <td className="py-2 pr-4">2025-08-12</td>
                 <td className="py-2 pr-4">18:00 UTC</td>
-                <td className="py-2 pr-4">Central Plaza</td>
+                <td className="py-2 pr-4">Heikki</td>
                 <td className="py-2 pr-4">
                   <button className="h-8 px-3 rounded-md border">Details</button>
                 </td>

@@ -1,10 +1,29 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export function createSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+let client: SupabaseClient | undefined;
+
+const globalForSupabase = globalThis as unknown as {
+  __supabase?: SupabaseClient;
+};
+
+export function getSupabaseBrowser() {
+  if (globalForSupabase.__supabase) return globalForSupabase.__supabase;
+  if (!client) {
+    client = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          storageKey: "civmc-auth-v1",
+          persistSession: true,
+          detectSessionInUrl: true,
+        },
+      }
+    );
   }
-  return createClient(url, anonKey);
+  if (process.env.NODE_ENV !== "production") {
+    globalForSupabase.__supabase = client;
+  }
+  return client;
 } 

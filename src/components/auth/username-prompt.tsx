@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSupabaseUser } from "@/components/auth/auth-button";
-import { createSupabase } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/lib/supabaseClient";
 
 export default function UsernamePrompt() {
   const user = useSupabaseUser();
@@ -20,9 +20,8 @@ export default function UsernamePrompt() {
   useEffect(() => {
     async function check() {
       if (!user) return;
-      const sb = createSupabase();
-      const { data, error } = await sb.from("profiles").select("username").eq("id", user.id).maybeSingle();
-      if (error) return; // silent fail
+      const sb = getSupabaseBrowser();
+      const { data } = await sb.from("profiles").select("username").eq("id", user.id).maybeSingle();
       if (data?.username) setVisible(false);
     }
     check();
@@ -35,7 +34,7 @@ export default function UsernamePrompt() {
     setSuccess(null);
     startTransition(async () => {
       try {
-        const sb = createSupabase();
+        const sb = getSupabaseBrowser();
         const { error } = await sb.from("profiles").update({ username: username.trim() || null }).eq("id", user!.id);
         if (error) {
           console.error("Failed to set username", error);

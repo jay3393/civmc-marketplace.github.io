@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createSupabase } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 export type ContractRow = {
@@ -31,7 +31,7 @@ export type ContractRow = {
 };
 
 async function fetchContracts(): Promise<ContractRow[]> {
-  const supabase = createSupabase();
+  const supabase = getSupabaseBrowser();
   const { data, error } = await supabase
     .from("contracts")
     .select(

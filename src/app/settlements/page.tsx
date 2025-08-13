@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { createSupabase } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/lib/supabaseClient";
 
 type SettlementRow = {
   settlement_name: string;
@@ -15,7 +15,7 @@ export default async function SettlementsPage() {
   let loadError: string | null = null;
 
   try {
-    const supabase = createSupabase();
+    const supabase = getSupabaseBrowser();
     const { data, error } = await supabase
       .from("settlements_readonly")
       .select("*")

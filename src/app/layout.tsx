@@ -34,6 +34,9 @@ export default function RootLayout({
               <div className="flex items-center gap-4 text-sm">
                 <Link href="/marketplace">Marketplace</Link>
                 <Link href="/routes">Routes</Link>
+                <Link href="/contracts">Contracts</Link>
+                <Link href="/events">Events</Link>
+                <Link href="/settlements">Settlements</Link>
               </div>
             </nav>
           </header>

@@ -33,7 +33,12 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useSupabaseUser } from "@/components/auth/auth-button";
+
+// types
 
 type ContractInsert = {
   title: string;
@@ -55,16 +60,12 @@ type SettlementOpt = { id: number; settlement_name: string };
 type DiscordUserMetadata = {
   provider_id?: string;
   sub?: string;
-  user_name?: string;
-  avatar_url?: string;
-  [key: string]: unknown;
 };
 
 async function loadCurrencies(): Promise<Currency[]> {
   const sb = getSupabaseBrowser();
   const { data, error } = await sb.from("currencies").select("id,name").order("name");
   if (error) {
-    console.error("Failed to load currencies", { error });
     throw new Error("Failed to load currencies.");
   }
   return (data ?? []) as Currency[];
@@ -74,7 +75,6 @@ async function loadSettlements(): Promise<SettlementOpt[]> {
   const sb = getSupabaseBrowser();
   const { data, error } = await sb.from("settlements").select("id,settlement_name").order("settlement_name");
   if (error) {
-    console.error("Failed to load settlements", { error });
     throw new Error("Failed to load settlements.");
   }
   return (data ?? []) as SettlementOpt[];
@@ -84,10 +84,12 @@ export default function CreateContract() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const queryClient = useQueryClient();
+  const user = useSupabaseUser();
+  const [settlementOpen, setSettlementOpen] = useState(false);
   const [form, setForm] = useState({
     title: "",
     type: "request" as "request" | "offer",
-    category: "Resource",
+    category: "", // require explicit selection
     budget_amount: "",
     budget_currency_id: "",
     deadline: "",
@@ -110,20 +112,31 @@ export default function CreateContract() {
   async function resolveCreatedById(): Promise<string> {
     const sb = getSupabaseBrowser();
     const { data: userData } = await sb.auth.getUser();
-    const user = userData?.user;
-    if (!user) throw new Error("Not authenticated");
+    const authUser = userData?.user;
+    if (!authUser) throw new Error("Not authenticated");
 
-    const { data: profById } = await sb.from("profiles").select("id").eq("id", user.id).limit(1).maybeSingle();
+    const { data: profById } = await sb.from("profiles").select("id").eq("id", authUser.id).limit(1).maybeSingle();
     if (profById?.id) return profById.id as string;
 
-    const meta = (user.user_metadata ?? {}) as DiscordUserMetadata;
+    const meta = (authUser.user_metadata ?? {}) as DiscordUserMetadata;
     const discordId = meta.provider_id || meta.sub || null;
     if (discordId) {
-      const { data: profByDiscord } = await sb.from("profiles").select("id").eq("discord_user_id", String(discordId)).limit(1).maybeSingle();
+      const { data: profByDiscord } = await sb
+        .from("profiles")
+        .select("id")
+        .eq("discord_user_id", String(discordId))
+        .limit(1)
+        .maybeSingle();
       if (profByDiscord?.id) return profByDiscord.id as string;
     }
 
     throw new Error("Profile not found for user");
+  }
+
+  async function signInWithDiscord() {
+    const sb = getSupabaseBrowser();
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
+    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
   }
 
   async function onSubmit() {
@@ -149,15 +162,22 @@ export default function CreateContract() {
         const { error: insertError } = await supabase.from("contracts").insert(payload);
         if (insertError) {
           console.error("Failed to create contract", { insertError });
-          setError("Could not create contract. Please try again.");
+          // Show auth-related messages directly; otherwise fallback generic
+          const msg = insertError.message || "Could not create contract. Please try again.";
+          setError(msg);
           return;
         }
         setSuccess("Contract created.");
         setOpen(false);
         queryClient.invalidateQueries({ queryKey: ["contracts"], exact: false });
       } catch (e) {
-        console.error("Unexpected error creating contract", e);
-        setError("Could not create contract. Please try again.");
+        const message = e instanceof Error ? e.message : "Could not create contract. Please try again.";
+        if (message.toLowerCase().includes("not authenticated")) {
+          setError("You must be logged in to create a contract.");
+        } else {
+          console.error("Unexpected error creating contract", e);
+          setError("Could not create contract. Please try again.");
+        }
       }
     });
   }
@@ -180,6 +200,18 @@ export default function CreateContract() {
           <DialogHeader>
             <DialogTitle>New contract</DialogTitle>
           </DialogHeader>
+
+          {!user ? (
+            <Alert className="mb-2">
+              <AlertTitle>Sign in required</AlertTitle>
+              <AlertDescription>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-sm">Please log in with Discord to create a contract.</span>
+                  <Button size="sm" onClick={signInWithDiscord}>Login with Discord</Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div>
@@ -232,14 +264,15 @@ export default function CreateContract() {
               </div>
               <div className="grid gap-1.5">
                 <Label>Category</Label>
-                <Select value={form.category} onValueChange={(v) => onChange("category", v)}>
-                  <SelectTrigger>
+                <Select value={form.category || undefined} onValueChange={(v) => onChange("category", v)}>
+                  <SelectTrigger className="data-[placeholder]:text-muted-foreground">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Resource">Resource</SelectItem>
                     <SelectItem value="Construction">Construction</SelectItem>
                     <SelectItem value="Logistics">Logistics</SelectItem>
+                    <SelectItem value="Service">Service</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -273,29 +306,40 @@ export default function CreateContract() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Settlement (optional)</Label>
-                <Popover>
+                <Popover open={settlementOpen} onOpenChange={setSettlementOpen} modal={true}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="justify-between">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-between",
+                        form.settlement_id ? "text-foreground" : "text-muted-foreground"
+                      )}
+                    >
                       {form.settlement_id
                         ? settlements?.find((s) => String(s.id) === String(form.settlement_id))?.settlement_name ?? "Select settlement"
                         : "Select settlement"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm max-h-72 overflow-auto" align="start">
-                    <Command className="max-h-64" filter={(value, search) => (value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
-                      <CommandInput placeholder="Search settlements..." />
+                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm max-h-80 overflow-y-auto" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search settlements..." className="placeholder:text-muted-foreground" />
                       <CommandEmpty>No settlements found.</CommandEmpty>
-                      <CommandGroup>
-                        {settlements?.map((s) => (
-                          <CommandItem
-                            key={s.id}
-                            value={s.settlement_name}
-                            onSelect={() => onChange("settlement_id", String(s.id))}
-                          >
-                            {s.settlement_name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                      <CommandList className="max-h-72 overflow-y-auto">
+                        <CommandGroup>
+                          {settlements?.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.settlement_name}
+                              onSelect={() => {
+                                onChange("settlement_id", String(s.id))
+                                setSettlementOpen(false)
+                              }}
+                            >
+                              {s.settlement_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
                     </Command>
                   </PopoverContent>
                 </Popover>
@@ -344,7 +388,9 @@ export default function CreateContract() {
                 isPending ||
                 !form.title ||
                 !form.budget_amount ||
-                !form.budget_currency_id
+                !form.budget_currency_id ||
+                !user ||
+                !form.category
               }
             >
               {isPending ? "Creating…" : "Create"}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export type ContractRow = {
   id: string;
@@ -115,7 +116,6 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
             <th className="py-2 pr-4">Title</th>
             <th className="py-2 pr-4">Category</th>
             <th className="py-2 pr-4">Budget</th>
-            <th className="py-2 pr-4">Deadline</th>
           </tr>
         </thead>
         <tbody>
@@ -136,7 +136,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                   <td className="py-2 pr-4 align-top capitalize">
                     <TypeBadge value={c.type} />
                   </td>
-                  <td className="py-2 pr-4 align-top">{c.settlement?.nation_name ?? "-"}</td>
+                  <td className="py-2 pr-4 align-top max-w-[100px] truncate" title={c.settlement?.nation_name ?? "-"}>{c.settlement?.nation_name ?? "-"}</td>
                   <td className="py-2 pr-4 align-top">{ownerName(c)}</td>
                   <td className="py-2 pr-4 align-top max-w-[260px] truncate" title={c.title}>
                     {c.title}
@@ -144,9 +144,6 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                   <td className="py-2 pr-4 align-top">{c.category}</td>
                   <td className="py-2 pr-4 align-top">
                     {c.budget_amount} {c.currency?.name ?? ""}
-                  </td>
-                  <td className="py-2 pr-4 align-top">
-                    {c.deadline ? new Date(c.deadline).toLocaleDateString() : "—"}
                   </td>
                 </tr>
                 {isOpen ? (
@@ -173,7 +170,15 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                           </div>
                           <div className="grid gap-1">
                             <div className="text-xs text-muted-foreground">Status</div>
-                            <div className="text-sm capitalize">{c.status}</div>
+                            {c.status === "open" && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm capitalize">Open</Badge>
+                            )}
+                            {c.status === "closed" && (
+                              <Badge variant="secondary" className="bg-red-100 text-red-800 text-sm capitalize">Closed</Badge>
+                            )}
+                            {c.status === "expired" && (
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-sm capitalize">Expired</Badge>
+                            )}
                           </div>
                           <div className="grid gap-1">
                             <div className="text-xs text-muted-foreground">Created at</div>

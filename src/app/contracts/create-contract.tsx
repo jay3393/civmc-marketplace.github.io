@@ -159,16 +159,40 @@ export default function CreateContract() {
           created_by: createdBy,
         };
 
-        const { error: insertError } = await supabase.from("contracts").insert(payload);
-        if (insertError) {
+        // 1) Create contract and RETURN the id so we can post to Discord
+        const { data: inserted, error: insertError } = await supabase
+        .from("contracts")
+        .insert(payload)
+        .select("id")          // important: return id
+        .single();             // single row
+
+        if (insertError || !inserted?.id) {
           console.error("Failed to create contract", { insertError });
-          // Show auth-related messages directly; otherwise fallback generic
-          const msg = insertError.message || "Could not create contract. Please try again.";
+          const msg = insertError?.message || "Could not create contract. Please try again.";
           setError(msg);
           return;
         }
-        setSuccess("Contract created.");
+
+        // 2) Kick off the Discord webhook via Edge Function
+        //    (Edge function name must match your deployed one)
+        const { data: fxData, error: fxError } = await supabase.functions.invoke(
+          "post-contract-to-discord",
+          { body: { contract_id: inserted.id } }
+        );
+
+        // 3) UI feedback
+        if (fxError) {
+          // Contract is created; Discord failed — warn but don't roll back
+          console.warn("Discord post failed", fxError);
+          setSuccess("Contract created. (Heads up: Discord post failed — try re‑posting from the contract page.)");
+        } else if (fxData?.already_posted) {
+          setSuccess("Contract created. Already posted to Discord.");
+        } else {
+          setSuccess("Contract created and posted to Discord.");
+        }
+
         setOpen(false);
+        // Refresh any contract lists
         queryClient.invalidateQueries({ queryKey: ["contracts"], exact: false });
       } catch (e) {
         const message = e instanceof Error ? e.message : "Could not create contract. Please try again.";
@@ -280,13 +304,13 @@ export default function CreateContract() {
 
             <div className="grid gap-1.5">
               <Label htmlFor="description">Description</Label>
-              <Textarea id="description" value={form.description} onChange={(e) => onChange("description", e.target.value)} />
+              <Textarea id="description" value={form.description} onChange={(e) => onChange("description", e.target.value)} className="max-h-[200px] overflow-y-auto" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="budget_amount">Budget amount</Label>
-                <Input id="budget_amount" type="number" min="0" step="0.01" value={form.budget_amount} onChange={(e) => onChange("budget_amount", e.target.value)} />
+                <Input id="budget_amount" type="number" min="1" step="1" value={form.budget_amount} onChange={(e) => onChange("budget_amount", e.target.value)} />
               </div>
               <div className="grid gap-1.5">
                 <Label>Currency</Label>

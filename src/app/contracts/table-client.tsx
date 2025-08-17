@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export type ContractRow = {
   id: string;
@@ -186,16 +187,13 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                           </div>
                         </div>
 
-                      <div className="grid gap-1">
-                        <div className="flex items-center gap-2">
-                          <button className="h-8 px-3 rounded-md border inline-flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                              <path d="M2 5a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H8.83L4.12 21.78A1 1 0 0 1 3 20.92V17a3 3 0 0 1-1-2V5Zm3-1a1 1 0 0 0-1 1v10a1 1 0 0 0 .55.89l.45.23v2.38l3.38-1.69A1 1 0 0 1 10 17h9a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H5Z" />
-                            </svg>
-                            Contact
-                          </button>
+                        <div className="grid gap-1">
+                          <div className="flex items-center gap-2">
+                            <Link href={`/contracts/${c.id}`} className="h-8 px-3 rounded-md border inline-flex items-center gap-2">
+                              View Contract
+                            </Link>
+                          </div>
                         </div>
-                      </div>
 
                       </div>
                     </td>

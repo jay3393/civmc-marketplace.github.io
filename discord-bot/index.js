@@ -15,6 +15,7 @@ import {
   const APP_ID = process.env.DISCORD_APP_ID;        // your Application (Client) ID
   const INGEST_URL = process.env.INGEST_URL;        // https://<ref>.supabase.co/functions/v1/ingest-forum-thread
   const SUPABASE_BEARER = process.env.SUPABASE_BEARER; // shared secret
+  const SUPABASE_API_KEY = process.env.SUPABASE_ANON_KEY; // shared secret
   const LOG_LEVEL = process.env.LOG_LEVEL || "info";
   
   if (!TOKEN || !APP_ID || !INGEST_URL || !SUPABASE_BEARER) {
@@ -134,7 +135,8 @@ import {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${SUPABASE_BEARER}`,
+            "Authorization": `Bearer ${SUPABASE_BEARER}`,
+            "apikey": `${SUPABASE_API_KEY}`
           },
           body: JSON.stringify(payload),
         });

@@ -83,7 +83,12 @@ import {
   }
   
   /** ---------- LIFECYCLE ---------- **/
-  client.on(Events.ClientReady, () => {
+  client.on(Events.ClientReady, async () => {
+    // Register in ALL guilds the bot is already in
+    const guilds = await client.guilds.fetch();
+    for (const [id] of guilds) {
+        await registerGuildCommands(id);
+    }
     console.log(`✅ Logged in as ${client.user.tag}`);
     console.log(`🔗 Invite URL: ${buildInviteURL()}`);
     console.log("   (Share this with nation admins to add the bot to their servers.)");

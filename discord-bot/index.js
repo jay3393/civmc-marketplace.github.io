@@ -30,7 +30,7 @@ import {
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
-    //   GatewayIntentBits.MessageContent, // enable in Dev Portal if you want starter message text
+      GatewayIntentBits.MessageContent, // enable in Dev Portal if you want starter message text
     ],
     partials: [Partials.Channel, Partials.Message, Partials.GuildMember],
   });
@@ -135,7 +135,7 @@ import {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_BEARER}`,
+            Authorization: `Bearer ${SUPABASE_BEARER}`,
             "apikey": `${SUPABASE_API_KEY}`
           },
           body: JSON.stringify(payload),

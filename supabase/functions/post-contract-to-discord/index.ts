@@ -127,7 +127,9 @@ serve(async (req)=>{
       timestamp: new Date().toISOString()
     };
     // Forum thread name (<=100 chars)
-    const threadName = `【${settlement?.nation_name ?? "Unknown"}】 ${c.title}`.slice(0, 100);
+    // append the settlement name to the thread name if it exists otherwise just title
+    const nationName = settlement?.nation_name ?? "";
+    const threadName = nationName ? `【${nationName}】 ${c.title}`.slice(0, 100) : c.title.slice(0, 100);
     // Create Forum thread with initial message
     const discordResp = await fetch(`https://discord.com/api/v10/channels/${FORUM_CHANNEL_ID}/threads`, {
       method: "POST",

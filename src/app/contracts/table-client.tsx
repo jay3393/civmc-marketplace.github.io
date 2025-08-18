@@ -71,6 +71,12 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const user = useSupabaseUser();
   
+  const currencyMapNameToImage = {
+    "diamond": "https://minecraft.wiki/images/Diamond_JE3_BE3.png?99d00&format=original",
+    "essence": "https://minecraft.wiki/images/Eye_of_Ender_JE2_BE2.png?3e29b&format=original",
+    "emerald": "https://minecraft.wiki/images/Emerald_JE3_BE3.png?99d00&format=original",
+  }
+  
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return (data ?? []).filter((c) => {
@@ -108,7 +114,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
       <span
         className={
           `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ` +
-          (isReq ? `bg-blue-100 text-blue-800` : `bg-green-100 text-green-800`)
+          (isReq ? `bg-blue-500 text-white` : `bg-green-500 text-white`)
         }
       >
         {value}
@@ -121,7 +127,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
     if (metaUrl) return metaUrl;
     const threadId = c.discord_thread_id || null;
     const guildId = process.env.NEXT_PUBLIC_DISCORD_GUILD_ID as string | undefined;
-    if (threadId && guildId) return `discord://discord.com/channels/${guildId}/${threadId}`;
+    if (threadId && guildId) return `discord.com/channels/${guildId}/${threadId}`;
     return null;
   }
 
@@ -164,8 +170,8 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                     {c.title}
                   </td>
                   <td className="py-2 pr-4 align-top">{c.category}</td>
-                  <td className="py-2 pr-4 align-top">
-                    {c.budget_amount} {c.currency?.name ?? ""}
+                  <td className="py-2 pr-4 align-top flex items-center gap-1">
+                    {c.budget_amount} <img src={currencyMapNameToImage[c.currency?.name as keyof typeof currencyMapNameToImage] ?? ""} alt={c.currency?.name ?? ""} className="w-4 h-4 inline-block" />
                   </td>
                 </tr>
                 {isOpen ? (
@@ -214,11 +220,17 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                             {/* if user is authenicated, show a button to view the contract on discord */}
                             {discordUrl && user ? (
                               <a
-                                href={discordUrl}
+                                href={`discord://${discordUrl}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="h-8 px-3 rounded-md border inline-flex items-center gap-2"
+                                className="h-8 px-3 rounded-md border inline-flex items-center gap-2 bg-blue-100 text-blue-800 hover:bg-blue-200"
                                 title="Open in Discord"
+                                // onClick={(e) => {
+                                //   // fallback if discord:// not supported
+                                //   setTimeout(() => {
+                                //     window.location.href = `https://${discordUrl}`;
+                                //   }, 500);
+                                // }}
                               >
                                 View contract on Discord
                               </a>

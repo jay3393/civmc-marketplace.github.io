@@ -29,7 +29,7 @@ import {
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.MessageContent, // enable in Dev Portal if you want starter message text
+    //   GatewayIntentBits.MessageContent, // enable in Dev Portal if you want starter message text
     ],
     partials: [Partials.Channel, Partials.Message, Partials.GuildMember],
   });

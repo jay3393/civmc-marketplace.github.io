@@ -5,6 +5,8 @@ import ContractsTable from "./table-client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const FILTER_CATEGORIES = ["All Categories", "Building", "Gathering", "Services", "Bounty", "Other"] as const;
+
 export default function ContractsView() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -18,16 +20,19 @@ export default function ContractsView() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Select value={category ?? "all"} onValueChange={(v) => setCategory(v === "all" ? null : v)}>
-          <SelectTrigger className="h-9 w-[200px] text-foreground data-[placeholder]:text-muted-foreground">
-            <SelectValue placeholder="Select category" />
+        <Select
+          value={category ?? "All Categories"}
+          onValueChange={(v) => setCategory(v === "All Categories" ? null : v)}
+        >
+          <SelectTrigger className="h-9 w-[220px] text-foreground data-[placeholder]:text-muted-foreground">
+            <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            <SelectItem value="Resource">Resource</SelectItem>
-            <SelectItem value="Construction">Construction</SelectItem>
-            <SelectItem value="Logistics">Logistics</SelectItem>
-            <SelectItem value="Service">Service</SelectItem>
+            {FILTER_CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

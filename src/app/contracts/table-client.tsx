@@ -6,6 +6,8 @@ import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useSupabaseUser } from "@/components/auth/auth-button";
+import { Button } from "@/components/ui/button";
 
 export type ContractRow = {
   id: string;
@@ -31,14 +33,22 @@ export type ContractRow = {
     id: string;
     name: string;
   } | null;
+  discord_thread_id?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
+
+async function signInWithDiscord() {
+  const sb = getSupabaseBrowser();
+  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
+  await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
+}
 
 async function fetchContracts(): Promise<ContractRow[]> {
   const supabase = getSupabaseBrowser();
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      `id,title,description,type,category,budget_amount,deadline,status,created_at,
+      `id,title,description,type,category,budget_amount,deadline,status,created_at,discord_thread_id,metadata,
        settlement:settlements(id,settlement_name,nation_name),
        owner:profiles(id,username,discord_user_id),
        currency:currencies(id,name)`
@@ -59,7 +69,8 @@ type Props = {
 export default function ContractsTable({ searchQuery = "", category = null }: Props) {
   const { data, isLoading, isError } = useQuery({ queryKey: ["contracts"], queryFn: fetchContracts });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
+  const user = useSupabaseUser();
+  
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return (data ?? []).filter((c) => {
@@ -105,6 +116,15 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
     );
   }
 
+  function threadUrlFor(c: ContractRow): string | null {
+    const metaUrl = (c.metadata?.discord_thread_url as string | undefined) ?? undefined;
+    if (metaUrl) return metaUrl;
+    const threadId = c.discord_thread_id || null;
+    const guildId = process.env.NEXT_PUBLIC_DISCORD_GUILD_ID as string | undefined;
+    if (threadId && guildId) return `discord://discord.com/channels/${guildId}/${threadId}`;
+    return null;
+  }
+
   return (
     <div className="mt-2 overflow-x-auto">
       <table className="w-full text-sm">
@@ -122,6 +142,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
         <tbody>
           {filtered.map((c) => {
             const isOpen = !!expanded[c.id];
+            const discordUrl = threadUrlFor(c);
             return (
               <>
                 <tr key={c.id} className="border-b">
@@ -150,7 +171,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
                 {isOpen ? (
                   <tr className="border-b bg-muted/20">
                     <td className="py-3 pr-4" />
-                    <td className="py-3 pr-4" colSpan={7}>
+                    <td className="py-3 pr-4" colSpan={6}>
                       <div className="grid gap-6">
                         <div className="grid gap-1">
                           <div className="text-xs text-muted-foreground">Title</div>
@@ -189,9 +210,27 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
 
                         <div className="grid gap-1">
                           <div className="flex items-center gap-2">
-                            <Link href={`/contracts/${c.id}`} className="h-8 px-3 rounded-md border inline-flex items-center gap-2">
-                              View Contract
-                            </Link>
+                            {/* if user is not authenicated, show a button to login with discord */}
+                            {/* if user is authenicated, show a button to view the contract on discord */}
+                            {discordUrl && user ? (
+                              <a
+                                href={discordUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="h-8 px-3 rounded-md border inline-flex items-center gap-2"
+                                title="Open in Discord"
+                              >
+                                View contract on Discord
+                              </a>
+                            ) : discordUrl && !user ? (
+                              <button className="h-8 px-3 rounded-md border inline-flex items-center gap-2" onClick={signInWithDiscord}>
+                                Login with Discord to view contract
+                              </button>
+                            ) : (
+                              <button className="h-8 px-3 rounded-md border opacity-60 cursor-not-allowed" title="Not yet posted to Discord">
+                                View contract on Discord
+                              </button>
+                            )}
                           </div>
                         </div>
 

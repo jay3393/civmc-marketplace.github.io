@@ -38,6 +38,22 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 
+const CATEGORY_OPTIONS = [
+  "Building",
+  "Gathering",
+  "Services",
+  "Bounty",
+  "Other",
+] as const;
+
+const CATEGORY_TO_TAG_ID: Record<string, string> = {
+  Building: "1406705159119044638",
+  Gathering: "1406705237930147940",
+  Services: "1406705387989897346",
+  Bounty: "1406705477638815844",
+  Other: "1406715678408310864",
+};
+
 // types
 
 type ContractInsert = {
@@ -51,6 +67,7 @@ type ContractInsert = {
   deadline_asap: boolean;
   settlement_id: number | null;
   created_by: string;
+  metadata: Record<string, unknown> | null;
 };
 
 type Currency = { id: string; name: string };
@@ -146,6 +163,7 @@ export default function CreateContract() {
       try {
         const createdBy = await resolveCreatedById();
         const supabase = getSupabaseBrowser();
+        const discordTagId = CATEGORY_TO_TAG_ID[form.category] ?? undefined;
         const payload: ContractInsert = {
           title: form.title.trim(),
           type: form.type,
@@ -157,6 +175,7 @@ export default function CreateContract() {
           deadline_asap: form.deadline_asap,
           settlement_id: form.settlement_id ? Number(form.settlement_id) : null,
           created_by: createdBy,
+          metadata: discordTagId ? { discord_tag_id: discordTagId } : null,
         };
 
         // 1) Create contract and RETURN the id so we can post to Discord
@@ -293,10 +312,11 @@ export default function CreateContract() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Resource">Resource</SelectItem>
-                    <SelectItem value="Construction">Construction</SelectItem>
-                    <SelectItem value="Logistics">Logistics</SelectItem>
-                    <SelectItem value="Service">Service</SelectItem>
+                    {CATEGORY_OPTIONS.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

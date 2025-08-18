@@ -87,7 +87,7 @@ import {
     // Register in ALL guilds the bot is already in
     const guilds = await client.guilds.fetch();
     for (const [id] of guilds) {
-        await registerGuildCommands(id);
+        await registerCommands(id);
     }
     console.log(`✅ Logged in as ${client.user.tag}`);
     console.log(`🔗 Invite URL: ${buildInviteURL()}`);

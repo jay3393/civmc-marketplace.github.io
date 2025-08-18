@@ -1,12 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +48,13 @@ async function fetchSettlements(): Promise<SettlementRow[]> {
   return (data ?? []) as SettlementRow[];
 }
 
+async function fetchNations(): Promise<{ id: string | number; nation_name: string }[]> {
+  const sb = getSupabaseBrowser();
+  const { data, error } = await sb.from("nations").select("id,nation_name").order("nation_name");
+  if (error) return [];
+  return (data ?? []) as { id: string | number; nation_name: string }[];
+}
+
 function toNumber(val: number | string | null | undefined): number | null {
   if (val === null || val === undefined) return null;
   if (typeof val === "number") return val;
@@ -60,6 +72,9 @@ export default function SettlementsPage() {
   const [q, setQ] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [mode, setMode] = useState<"chooser" | "nation" | "settlement">("chooser");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["settlements"], queryFn: fetchSettlements });
 
@@ -106,6 +121,19 @@ export default function SettlementsPage() {
             <Search className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      <div className="text-center text-sm">
+        Don&apos;t see your nation/settlement?{' '}
+        <button
+          className="underline text-blue-600 hover:text-blue-700"
+          onClick={() => {
+            setMode("chooser");
+            setRegisterOpen(true);
+          }}
+        >
+          Click here to register your own.
+        </button>
       </div>
 
       <div className="flex flex-wrap justify-center gap-2">
@@ -203,6 +231,270 @@ export default function SettlementsPage() {
           })}
         </div>
       )}
+
+      <RegisterModal open={registerOpen} onOpenChange={setRegisterOpen} mode={mode} setMode={setMode} />
+    </div>
+  );
+}
+
+function RegisterModal({ open, onOpenChange, mode, setMode }: { open: boolean; onOpenChange: (v: boolean) => void; mode: "chooser" | "nation" | "settlement"; setMode: (m: "chooser" | "nation" | "settlement") => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        {mode === "chooser" ? (
+          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Register your community</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button className="h-10" onClick={() => setMode("nation")}>Register Nation</Button>
+              <Button className="h-10" onClick={() => setMode("settlement")}>Register Settlement</Button>
+            </div>
+          </div>
+        ) : mode === "nation" ? (
+          <RegisterNation onDone={() => onOpenChange(false)} onBack={() => setMode("chooser")} />
+        ) : (
+          <RegisterSettlement onDone={() => onOpenChange(false)} onBack={() => setMode("chooser")} />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+  const [name, setName] = useState("");
+  const [x, setX] = useState("");
+  const [z, setZ] = useState("");
+  const [description, setDescription] = useState("");
+  const [discord, setDiscord] = useState("");
+  const [flagUrl, setFlagUrl] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function submit() {
+    setError(null);
+    setSuccess(null);
+    startTransition(async () => {
+      try {
+        const sb = getSupabaseBrowser();
+        const payload: Record<string, unknown> = {
+          nation_name: name.trim(),
+          x: x.trim() || null,
+          z: z.trim() || null,
+          description: description.trim() || null,
+          discord: discord.trim() || null,
+          flag_url: flagUrl.trim() || null,
+        };
+        const { error } = await sb.from("nations").insert(payload);
+        if (error) {
+          console.warn("Nation registration failed", error);
+          setError("Failed to register nation. Please try again later.");
+          return;
+        }
+        setSuccess("Nation registered.");
+        onDone();
+      } catch (e) {
+        console.warn("Unexpected nation registration error", e);
+        setError("Failed to register nation. Please try again later.");
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <DialogHeader>
+        <DialogTitle>Register Nation</DialogTitle>
+      </DialogHeader>
+      {error ? <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div> : null}
+      {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
+      <div className="grid gap-2">
+        <Label htmlFor="nation-name">Nation name</Label>
+        <Input id="nation-name" value={name} onChange={(e) => setName(e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label htmlFor="nx">X</Label>
+          <Input id="nx" value={x} onChange={(e) => setX(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="nz">Z</Label>
+          <Input id="nz" value={z} onChange={(e) => setZ(e.target.value)} />
+        </div>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="nd">Description</Label>
+        <Textarea id="nd" value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="ndu">Discord URL</Label>
+        <Input id="ndu" value={discord} onChange={(e) => setDiscord(e.target.value)} />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="flag">Nation flag image URL</Label>
+        <Input id="flag" value={flagUrl} onChange={(e) => setFlagUrl(e.target.value)} />
+      </div>
+      <div className="flex items-center justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={onBack}>Back</Button>
+        <Button onClick={submit} disabled={isPending || !name.trim()}>Submit</Button>
+      </div>
+    </div>
+  );
+}
+
+function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+  const [nationOpen, setNationOpen] = useState(false);
+  const [nationId, setNationId] = useState<string | number | null>(null);
+  const [nationName, setNationName] = useState("");
+  const [settlementName, setSettlementName] = useState("");
+  const [x, setX] = useState("");
+  const [z, setZ] = useState("");
+  const [discord, setDiscord] = useState("");
+  const [description, setDescription] = useState("");
+  const [memberCount, setMemberCount] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const { data: nations } = useQuery({ queryKey: ["nations"], queryFn: fetchNations });
+
+  function toggleTag(key: string) {
+    setSelectedTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
+  function calculatedSize(): "small" | "medium" | "large" | null {
+    const n = Number(memberCount);
+    if (!Number.isFinite(n)) return null;
+    if (n < 30) return "small";
+    if (n < 100) return "medium";
+    return "large";
+  }
+
+  async function submit() {
+    setError(null);
+    setSuccess(null);
+    startTransition(async () => {
+      try {
+        const sb = getSupabaseBrowser();
+        const payload: Record<string, unknown> = {
+          settlement_name: settlementName.trim(),
+          nation_name: nationName.trim() || null,
+          x: x.trim() || null,
+          z: z.trim() || null,
+          discord: discord.trim() || null,
+          description: description.trim() || null,
+          member_count: memberCount ? Number(memberCount) : null,
+          tags: selectedTags.length ? selectedTags : null,
+          size: calculatedSize(),
+        };
+        const { error } = await sb.from("settlements").insert(payload);
+        if (error) {
+          console.warn("Settlement registration failed", error);
+          setError("Failed to register settlement. Please try again later.");
+          return;
+        }
+        setSuccess("Settlement registered.");
+        onDone();
+      } catch (e) {
+        console.warn("Unexpected settlement registration error", e);
+        setError("Failed to register settlement. Please try again later.");
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <DialogHeader>
+        <DialogTitle>Register Settlement</DialogTitle>
+      </DialogHeader>
+      {error ? <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div> : null}
+      {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
+
+      <div className="grid gap-2">
+        <Label>Nation</Label>
+        <Popover open={nationOpen} onOpenChange={setNationOpen} modal>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={nationId ? "justify-between" : "justify-between text-muted-foreground"}>
+              {nationId ? nations?.find((n) => String(n.id) === String(nationId))?.nation_name ?? "Select nation" : "Select nation"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm max-h-80 overflow-y-auto" align="start">
+            <Command>
+              <CommandInput placeholder="Search nations..." />
+              <CommandEmpty>No nations found.</CommandEmpty>
+              <CommandList className="max-h-72 overflow-y-auto">
+                <CommandGroup>
+                  {nations?.map((n) => (
+                    <CommandItem
+                      key={String(n.id)}
+                      value={n.nation_name}
+                      onSelect={() => {
+                        setNationId(n.id);
+                        setNationName(n.nation_name);
+                        setNationOpen(false);
+                      }}
+                    >
+                      {n.nation_name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="sname">Settlement name</Label>
+        <Input id="sname" value={settlementName} onChange={(e) => setSettlementName(e.target.value)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label htmlFor="sx">X</Label>
+          <Input id="sx" value={x} onChange={(e) => setX(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="sz">Z</Label>
+          <Input id="sz" value={z} onChange={(e) => setZ(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="sdiscord">Discord URL</Label>
+        <Input id="sdiscord" value={discord} onChange={(e) => setDiscord(e.target.value)} />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="sdesc">Description</Label>
+        <Textarea id="sdesc" value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="smemb">Member count (estimate)</Label>
+        <Input id="smemb" type="number" min="0" value={memberCount} onChange={(e) => setMemberCount(e.target.value)} />
+      </div>
+
+      <div className="grid gap-2">
+        <Label>Tags</Label>
+        <div className="flex flex-wrap gap-2">
+          {TAGS.map((t) => (
+            <button
+              key={t.key}
+              className={`h-8 px-3 rounded-md border text-sm ${selectedTags.includes(t.key) ? "bg-muted" : "bg-background"}`}
+              onClick={() => toggleTag(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={onBack}>Back</Button>
+        <Button onClick={submit} disabled={isPending || !settlementName.trim() || !nationName.trim()}>Submit</Button>
+      </div>
     </div>
   );
 } 

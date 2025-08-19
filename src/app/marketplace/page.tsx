@@ -2,8 +2,8 @@ export const dynamic = "force-dynamic";
 
 const sellers = [
   {
-    username: "PinkDirt",
-    avatar: "https://minotar.net/avatar/PinkDirt.png",
+    username: "I_rs",
+    avatar: "https://minotar.net/avatar/I_rs.png",
     itemName: "Enchanted Netherite Pickaxe",
     itemImage: "https://minecraft.wiki/images/Enchanted_Netherite_Pickaxe.gif",
     price: 64,
@@ -11,8 +11,8 @@ const sellers = [
     badge: "Tools",
   },
   {
-    username: "Notch",
-    avatar: "https://minotar.net/avatar/Notch.png",
+    username: "Physics",
+    avatar: "https://minotar.net/avatar/Physics.png",
     itemName: "Emeralds (stack)",
     itemImage: "https://minecraft.wiki/images/Emerald_JE3_BE3.png",
     price: 16,
@@ -20,8 +20,8 @@ const sellers = [
     badge: "Resources",
   },
   {
-    username: "jeb_",
-    avatar: "https://minotar.net/avatar/jeb_.png",
+    username: "Hakr_",
+    avatar: "https://minotar.net/avatar/Hakr_.png",
     itemName: "Diamond Pickaxe",
     itemImage: "https://minecraft.wiki/images/Carrot_JE3_BE2.png",
     price: 24,
@@ -29,8 +29,8 @@ const sellers = [
     badge: "Tools",
   },
   {
-    username: "Dinnerbone",
-    avatar: "https://minotar.net/avatar/Dinnerbone.png",
+    username: "toontasker",
+    avatar: "https://minotar.net/avatar/toontasker.png",
     itemName: "Emerald (single)",
     itemImage: "https://minecraft.wiki/images/Eye_of_Ender_JE2_BE2.png",
     price: 1,
@@ -38,8 +38,8 @@ const sellers = [
     badge: "Currency",
   },
   {
-    username: "Grian",
-    avatar: "https://minotar.net/avatar/Grian.png",
+    username: "The_Zekk",
+    avatar: "https://minotar.net/avatar/The_Zekk.png",
     itemName: "Ench. Netherite Pickaxe",
     itemImage: "https://minecraft.wiki/images/Diamond_Chestplate_JE3_BE2.png",
     price: 48,
@@ -47,8 +47,8 @@ const sellers = [
     badge: "Tools",
   },
   {
-    username: "MumboJumbo",
-    avatar: "https://minotar.net/avatar/MumboJumbo.png",
+    username: "femboysilly",
+    avatar: "https://minotar.net/avatar/femboysilly.png",
     itemName: "Emeralds (16x)",
     itemImage: "https://minecraft.wiki/images/Oak_Log_(UD)_JE8_BE3.png",
     price: 4,

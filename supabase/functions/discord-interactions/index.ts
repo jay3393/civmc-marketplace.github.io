@@ -8,6 +8,12 @@ const DISCORD_PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;  // from Dev Por
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "1");
+const APP_ID = Deno.env.get("DISCORD_APP_ID")!;
+const INGEST_URL = Deno.env.get("INGEST_URL")!;
+const SUPABASE_BEARER = Deno.env.get("_SUPABASE_BEARER")!;
+const SUPABASE_API_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+const INVITE_PERMISSIONS = "326417599488";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
@@ -33,6 +39,10 @@ async function verifyDiscordRequest(req: Request, bodyText: string): Promise<boo
 function hexToUint8Array(hex: string) {
   return new Uint8Array(hex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)));
 }
+function inviteURL(appId = APP_ID) {
+  return `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=${INVITE_PERMISSIONS}&scope=bot%20applications.commands`;
+}
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -47,6 +57,74 @@ serve(async (req) => {
   // 1) PING
   if (body.type === 1) {
     return new Response(JSON.stringify({ type: 1 }), { headers: { "Content-Type":"application/json", ...CORS }});
+  }
+
+  // 2) APPLICATION COMMAND
+  if (body.type === 2) {
+    const name: string = body.data?.name ?? "";
+    const guildId: string | undefined = body.guild_id;
+    const userId: string | undefined = body.member?.user?.id ?? body.user?.id;
+
+    if (name === "invite") {
+      return respondEphemeral(
+        `🔗 **Invite me to your server:**\n${inviteURL()}\n\n` +
+          `> Requires permissions: View Channels, Read Message History, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Embed Links.`,
+        []
+      );
+    }
+
+    if (name === "contracts-setup") {
+      if (!guildId) return respondEphemeral("❌ This command must be used in a server.", []);
+      // Expect an option named "forum" with the channel id
+      const options: any[] = body.data?.options ?? [];
+      const forumOpt = options.find((o) => o.name === "forum");
+      const forumId: string | undefined = forumOpt?.value;
+      if (!forumId) return respondEphemeral("❌ Please pick a **Forum** channel.", []);
+
+      // Validate the selected channel is actually a Forum (type 15)
+      const resolvedChannels = body.data?.resolved?.channels ?? {};
+      const selected = resolvedChannels[forumId];
+      const isForum = selected?.type === 15; // ChannelType.GuildForum
+
+      if (!isForum) {
+        // If Discord didn’t resolve it (older SDKs), we still accept but warn.
+        // You can hard‑fail instead if you prefer strictness.
+        // return respondEphemeral("❌ Please pick a **Forum** channel.");
+        console.log("[contracts-setup] Channel type not resolved; proceeding with forumId only");
+      }
+
+      const payload = {
+        type: "setup_forum",
+        guild_id: guildId,
+        guild_name: body.guild?.name ?? "", // may be undefined; optional
+        forum_channel_id: forumId,
+        invoker_id: userId ?? "",
+      };
+
+      try {
+        const resp = await fetch(INGEST_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_BEARER}`,
+            apikey: SUPABASE_API_KEY,
+          },
+          body: JSON.stringify(payload),
+          // keepalive helps in edge contexts, optional:
+          // keepalive: true,
+        });
+    
+        if (resp.ok) {
+          return respondEphemeral(`✅ Ingest set to <#${forumId}>`, []);
+        } else {
+          const t = await resp.text();
+          return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
+        }
+      } catch (e) {
+        console.error("[contracts-setup] ingest error:", e);
+        return respondEphemeral("❌ Failed to reach ingest function.", []);
+      }
+    }
   }
 
   // 2) COMPONENT INTERACTION (buttons)

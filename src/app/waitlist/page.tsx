@@ -45,7 +45,7 @@ export default function WaitlistPage() {
           <div className="flex items-center justify-center gap-3 pt-2">
             {user ? (
               <button className="h-10 rounded-md border bg-green-600 text-white px-4" disabled>
-                You 7re on the list 26 signed in
+                You&apos;re on the list!
               </button>
             ) : (
               <button onClick={joinWaitlist} disabled={joining} className="h-10 rounded-md border bg-blue-600 text-white px-4 hover:bg-blue-500 transition">

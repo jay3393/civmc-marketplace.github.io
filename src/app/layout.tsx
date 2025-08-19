@@ -4,6 +4,7 @@ import HeaderShell from "./header-shell";
 import { Providers } from "./providers";
 import { Geist, Geist_Mono } from "next/font/google";
 import MainShell from "./main-shell";
+import LockGuard from "./lock-guard";
 
 export const metadata: Metadata = {
   title: "CivMC Tools",
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>
+          <LockGuard />
           <HeaderShell />
           <MainShell>{children}</MainShell>
         </Providers>

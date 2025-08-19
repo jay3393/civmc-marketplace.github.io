@@ -25,17 +25,15 @@ export function middleware(req: NextRequest) {
   if (!shouldLock(req)) return NextResponse.next();
 
   const path = req.nextUrl.pathname;
+  const isWaitlistRoot = path === "/waitlist" || path === "/waitlist/";
   const allow =
-    path.startsWith("/waitlist") ||
+    isWaitlistRoot ||
     path.startsWith("/auth/callback") ||
     path.startsWith("/_next") ||
     path.startsWith("/favicon") ||
     path.startsWith("/icons") ||
     path.startsWith("/images") ||
     path.startsWith("/api/");
-
-    console.log("path", path);
-    console.log("allow", allow);
 
   if (!allow) {
     const url = new URL("/waitlist", req.url);

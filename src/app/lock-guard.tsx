@@ -20,7 +20,8 @@ export default function LockGuard() {
 
   useEffect(() => {
     if (!shouldLock || !pathname) return;
-    const allow = pathname.startsWith("/waitlist") || pathname.startsWith("/auth/callback") || pathname.startsWith("/_next");
+    const isWaitlistRoot = pathname === "/waitlist" || pathname === "/waitlist/";
+    const allow = isWaitlistRoot || pathname.startsWith("/auth/callback") || pathname.startsWith("/_next");
     if (!allow) {
       router.replace("/waitlist");
     }

@@ -13,7 +13,7 @@ function isTruthy(value: string | undefined) {
 export default function MainShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isWaitlist = pathname?.startsWith("/waitlist") ?? false;
+  const isWaitlistRoot = pathname === "/waitlist" || pathname === "/waitlist/";
 
   const shouldLock = useMemo(() => {
     const envLocked = isTruthy(process.env.NEXT_PUBLIC_LOCK_TO_WAITLIST);
@@ -24,7 +24,7 @@ export default function MainShell({ children }: { children: React.ReactNode }) {
   const isAllowed = useMemo(() => {
     if (!pathname) return true;
     return (
-      pathname.startsWith("/waitlist") ||
+      isWaitlistRoot ||
       pathname.startsWith("/auth/callback") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon") ||
@@ -32,7 +32,7 @@ export default function MainShell({ children }: { children: React.ReactNode }) {
       pathname.startsWith("/images") ||
       pathname.startsWith("/api/")
     );
-  }, [pathname]);
+  }, [pathname, isWaitlistRoot]);
 
   useEffect(() => {
     if (shouldLock && !isAllowed && pathname) {
@@ -44,7 +44,7 @@ export default function MainShell({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  if (isWaitlist) {
+  if (isWaitlistRoot) {
     return (
       <div className="h-screen w-screen overflow-hidden">
         <main className="h-full w-full p-0 m-0">{children}</main>

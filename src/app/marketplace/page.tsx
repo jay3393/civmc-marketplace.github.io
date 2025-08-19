@@ -61,11 +61,16 @@ const diamondIcon = "https://minecraft.wiki/images/Emerald_JE3_BE3.png"; // plac
 
 export default function MarketplacePage() {
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {/* Ambient page glow */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-500/25 blur-3xl"/>
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/25 blur-3xl"/>
+      </div>
       {/* Hero (shorter) */}
       <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700">
         <div className="absolute -top-16 -left-16 h-56 w-56 rounded-full bg-blue-500/30 blur-3xl"/>
-        <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-indigo-500/30 blur-3xl"/>
+        <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-emerald-500/30 blur-3xl"/>
         <div className="relative grid gap-2 p-5 sm:p-6">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Marketplace</h1>
           {/* <p className="text-white/70 max-w-2xl text-sm sm:text-base">Discover player shops across CivMC. This is a fully mocked design for preview/screenshot purposes only.</p> */}

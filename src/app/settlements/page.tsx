@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const dynamic = "force-dynamic";
 
@@ -271,13 +272,26 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [authAlert, setAuthAlert] = useState(false);
+
+  async function signInWithDiscord() {
+    const sb = getSupabaseBrowser();
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
+    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
+  }
 
   async function submit() {
     setError(null);
     setSuccess(null);
+    setAuthAlert(false);
     startTransition(async () => {
       try {
         const sb = getSupabaseBrowser();
+        const { data: userData } = await sb.auth.getUser();
+        if (!userData?.user) {
+          setAuthAlert(true);
+          return;
+        }
         const payload: Record<string, unknown> = {
           nation_name: name.trim(),
           x: x.trim() || null,
@@ -306,6 +320,17 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
       <DialogHeader>
         <DialogTitle>Register Nation</DialogTitle>
       </DialogHeader>
+      {authAlert ? (
+        <Alert>
+          <AlertTitle>Sign in required</AlertTitle>
+          <AlertDescription>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm">Please log in with Discord to register a nation.</span>
+              <Button size="sm" onClick={signInWithDiscord}>Login with Discord</Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {error ? <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div> : null}
       {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
       <div className="grid gap-2">
@@ -356,6 +381,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [authAlert, setAuthAlert] = useState(false);
 
   const { data: nations } = useQuery({ queryKey: ["nations"], queryFn: fetchNations });
 
@@ -371,12 +397,24 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
     return "large";
   }
 
+  async function signInWithDiscord() {
+    const sb = getSupabaseBrowser();
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
+    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
+  }
+
   async function submit() {
     setError(null);
     setSuccess(null);
+    setAuthAlert(false);
     startTransition(async () => {
       try {
         const sb = getSupabaseBrowser();
+        const { data: userData } = await sb.auth.getUser();
+        if (!userData?.user) {
+          setAuthAlert(true);
+          return;
+        }
         const payload: Record<string, unknown> = {
           settlement_name: settlementName.trim(),
           nation_name: nationName.trim() || null,
@@ -408,6 +446,17 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
       <DialogHeader>
         <DialogTitle>Register Settlement</DialogTitle>
       </DialogHeader>
+      {authAlert ? (
+        <Alert>
+          <AlertTitle>Sign in required</AlertTitle>
+          <AlertDescription>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm">Please log in with Discord to register a settlement.</span>
+              <Button size="sm" onClick={signInWithDiscord}>Login with Discord</Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {error ? <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div> : null}
       {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
 

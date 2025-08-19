@@ -73,7 +73,7 @@ export default function MarketplacePage() {
         <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-emerald-500/30 blur-3xl"/>
         <div className="relative grid gap-2 p-5 sm:p-6">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Marketplace</h1>
-          {/* <p className="text-white/70 max-w-2xl text-sm sm:text-base">Discover player shops across CivMC. This is a fully mocked design for preview/screenshot purposes only.</p> */}
+          {/* <p className="text-white/70 max-w-2xl text-sm sm:text-base">Discover player shops across Civhub. This is a fully mocked design for preview/screenshot purposes only.</p> */}
         </div>
       </div>
 

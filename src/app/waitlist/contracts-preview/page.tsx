@@ -175,7 +175,7 @@ export default function ContractsPreviewPage() {
               Get things built. Find work. Reward bounty hunters.
             </h1>
             <p className="mt-2 max-w-2xl text-sm sm:text-base text-white/80">
-              Building, gathering, services, and bounties — a player-driven economy for CivMC.
+              Building, gathering, services, and bounties — a player-driven economy for CivHub.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1"><TypeBadge type="request"/> Nations post needs</span>

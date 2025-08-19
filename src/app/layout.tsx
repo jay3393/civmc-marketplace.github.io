@@ -7,8 +7,8 @@ import MainShell from "./main-shell";
 import LockGuard from "./lock-guard";
 
 export const metadata: Metadata = {
-  title: "CivMC Tools",
-  description: "Marketplace and rail routes for CivMC",
+  title: "CivHub",
+  description: "Marketplace and rail routes for CivHub",
 };
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });

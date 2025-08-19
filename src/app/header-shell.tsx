@@ -15,7 +15,7 @@ export default function HeaderShell() {
     <>
       <header className="w-full border-b sticky top-0 bg-background/80 backdrop-blur z-50">
         <nav className="container mx-auto flex items-center gap-6 h-14 px-4">
-          <Link href="/" className="font-semibold">CivMC</Link>
+          <Link href="/" className="font-semibold">CivHub</Link>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/marketplace">Marketplace</Link>
             <Link href="/routes">Routes</Link>

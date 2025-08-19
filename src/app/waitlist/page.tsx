@@ -55,7 +55,7 @@ export default function WaitlistPage() {
           <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground bg-background/60 backdrop-blur">
             Coming soon
           </div>
-          <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight">Join the CivMC Tools Waitlist</h1>
+          <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight">Join the CivHub Waitlist</h1>
           <p className="text-muted-foreground">Early access to premium features, integrations, and collaboration tools. Be first to try it and help shape the roadmap.</p>
           <div className="flex items-center justify-center gap-3 pt-2 pb-8">
             {user ? (

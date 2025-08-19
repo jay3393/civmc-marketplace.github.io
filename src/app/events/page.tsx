@@ -6,7 +6,7 @@ export default function EventsPage() {
       <div className="rounded-lg border p-4 space-y-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-          <p className="text-muted-foreground">Create and discover events across CivMC.</p>
+          <p className="text-muted-foreground">Create and discover events across CivHub.</p>
         </div>
         <input placeholder="Event title" className="h-9 rounded-md border px-3 text-sm bg-background w-full" />
         <div className="grid grid-cols-2 gap-2">

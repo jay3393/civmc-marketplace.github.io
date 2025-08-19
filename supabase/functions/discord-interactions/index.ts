@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const DISCORD_PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;  // from Dev Portal
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "2");
+const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "1");
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
@@ -72,15 +72,21 @@ serve(async (req) => {
     if (upErr) return respondEphemeral(`❌ DB error: ${upErr.message}`, []);
 
     // Recount
-    const { data: counts } = await sb
+    const { count: approvals, error: apprErr } = await sb
+    .from("application_reviews")
+    .select("*", { count: "exact", head: true })
+    .eq("application_id", application_id)
+    .eq("decision", "approve");
+    if (apprErr) return respondEphemeral(`❌ DB error (approvals): ${apprErr.message}`, []);
+    
+    const { count: rejects, error: rejErr } = await sb
       .from("application_reviews")
-      .select("decision, count:count(*)")
+      .select("*", { count: "exact", head: true })
       .eq("application_id", application_id)
-      .group("decision");
-
-    const approvals = counts?.find((c:any) => c.decision === "approve")?.count ?? 0;
-    const rejects   = counts?.find((c:any) => c.decision === "reject")?.count ?? 0;
-
+      .eq("decision", "reject");
+    if (rejErr) return respondEphemeral(`❌ DB error (rejects): ${rejErr.message}`, []);
+    
+    // Persist tallies
     await sb.from("applications").update({ approvals, rejects }).eq("id", application_id);
 
     // If threshold met → create entity + mark approved
@@ -91,9 +97,31 @@ serve(async (req) => {
 
     if (app.status === "pending" && approvals >= REQUIRED_APPROVALS) {
       if (app.kind === "nation") {
-        await sb.from("nations").insert({ name: app.name, description: app.description ?? null });
+        const { data: nation, error: nationErr } = await sb.from("nations").insert({
+          nation_name: app.data.nation_name,
+          description: app.data.description ?? null,
+          x: app.data.x ?? null,
+          z: app.data.z ?? null,
+          discord: app.data.discord ?? null,
+          active: true,
+        }).select().single();
+        if (nationErr) console.error("❌ DB error (nation):", nationErr);
+        console.log("✅ Nation created:", nation);
       } else {
-        await sb.from("settlements").insert({ name: app.name, description: app.description ?? null });
+        const { data: settlement, error: settlementErr } = await sb.from("settlements").insert({
+          settlement_name: app.data.settlement_name,
+          description: app.data.description ?? null,
+          nation_name: app.data.nation_name ?? null,
+          x: app.data.x ?? null,
+          z: app.data.z ?? null,
+          discord: app.data.discord ?? null,
+          member_count: app.data.member_count ?? null,
+          tags: app.data.tags ?? null,
+          size: app.data.size ?? null,
+          active: true,
+        }).select().single();
+        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr);
+        console.log("✅ Settlement created:", settlement);
       }
       await sb.from("applications").update({ status: "approved" }).eq("id", application_id);
       finalized = true;

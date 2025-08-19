@@ -56,6 +56,21 @@ async function fetchNations(): Promise<{ id: string | number; nation_name: strin
   return (data ?? []) as { id: string | number; nation_name: string }[];
 }
 
+async function getRequestor() {
+  const sb = getSupabaseBrowser();
+  const { data: userData } = await sb.auth.getUser();
+  const user = userData?.user;
+  if (!user) return null;
+  const profileId = user.id as string;
+  // Try to read username from profiles; fallback to discord metadata
+  let username: string | null = null;
+  const { data: profile } = await sb.from("profiles").select("username").eq("id", profileId).maybeSingle();
+  if (profile?.username) username = profile.username as string;
+  const meta = (user.user_metadata ?? {}) as { user_name?: string; global_name?: string };
+  const discordUsername = meta.global_name || meta.user_name || null;
+  return { profileId, username, discordUsername };
+}
+
 function toNumber(val: number | string | null | undefined): number | null {
   if (val === null || val === undefined) return null;
   if (typeof val === "number") return val;
@@ -286,31 +301,35 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
     setAuthAlert(false);
     startTransition(async () => {
       try {
-        const sb = getSupabaseBrowser();
-        const { data: userData } = await sb.auth.getUser();
-        if (!userData?.user) {
+        const req = await getRequestor();
+        if (!req) {
           setAuthAlert(true);
           return;
         }
-        const payload: Record<string, unknown> = {
-          nation_name: name.trim(),
-          x: x.trim() || null,
-          z: z.trim() || null,
-          description: description.trim() || null,
-          discord: discord.trim() || null,
-          flag_url: flagUrl.trim() || null,
+        const sb = getSupabaseBrowser();
+        const payload = {
+          kind: "nation" as const,
+          data: {
+            nation_name: name.trim(),
+            description: description.trim() || null,
+            x: x.trim() || null,
+            z: z.trim() || null,
+            discord: discord.trim() || null,
+            flag_url: flagUrl.trim() || null,
+          },
+          requestor: req,
         };
-        const { error } = await sb.from("nations").insert(payload);
-        if (error) {
-          console.warn("Nation registration failed", error);
-          setError("Failed to register nation. Please try again later.");
+        const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
+        if (fxError) {
+          console.warn("submit-application nation failed", fxError);
+          setError("Failed to submit application. Please try again later.");
           return;
         }
-        setSuccess("Nation registered.");
+        setSuccess("Application submitted for review.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected nation registration error", e);
-        setError("Failed to register nation. Please try again later.");
+        console.warn("Unexpected submit-application error (nation)", e);
+        setError("Failed to submit application. Please try again later.");
       }
     });
   }
@@ -347,7 +366,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
           <Input id="nz" value={z} onChange={(e) => setZ(e.target.value)} />
         </div>
       </div>
-      <div className="grid gap-2">
+      <div className="grid gap-2 max-h-40 overflow-y-auto">
         <Label htmlFor="nd">Description</Label>
         <Textarea id="nd" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
@@ -409,34 +428,38 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
     setAuthAlert(false);
     startTransition(async () => {
       try {
-        const sb = getSupabaseBrowser();
-        const { data: userData } = await sb.auth.getUser();
-        if (!userData?.user) {
+        const req = await getRequestor();
+        if (!req) {
           setAuthAlert(true);
           return;
         }
-        const payload: Record<string, unknown> = {
-          settlement_name: settlementName.trim(),
-          nation_name: nationName.trim() || null,
-          x: x.trim() || null,
-          z: z.trim() || null,
-          discord: discord.trim() || null,
-          description: description.trim() || null,
-          member_count: memberCount ? Number(memberCount) : null,
-          tags: selectedTags.length ? selectedTags : null,
-          size: calculatedSize(),
+        const sb = getSupabaseBrowser();
+        const payload = {
+          kind: "settlement" as const,
+          data: {
+            settlement_name: settlementName.trim(),
+            nation_name: nationName.trim() || null,
+            x: x.trim() || null,
+            z: z.trim() || null,
+            discord: discord.trim() || null,
+            description: description.trim() || null,
+            member_count: memberCount ? Number(memberCount) : null,
+            tags: selectedTags.length ? selectedTags : null,
+            size: calculatedSize(),
+          },
+          requestor: req,
         };
-        const { error } = await sb.from("settlements").insert(payload);
-        if (error) {
-          console.warn("Settlement registration failed", error);
-          setError("Failed to register settlement. Please try again later.");
+        const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
+        if (fxError) {
+          console.warn("submit-application settlement failed", fxError);
+          setError("Failed to submit application. Please try again later.");
           return;
         }
-        setSuccess("Settlement registered.");
+        setSuccess("Application submitted for review.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected settlement registration error", e);
-        setError("Failed to register settlement. Please try again later.");
+        console.warn("Unexpected submit-application error (settlement)", e);
+        setError("Failed to submit application. Please try again later.");
       }
     });
   }
@@ -515,7 +538,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         <Input id="sdiscord" value={discord} onChange={(e) => setDiscord(e.target.value)} />
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid gap-2 max-h-40 overflow-y-auto">
         <Label htmlFor="sdesc">Description</Label>
         <Textarea id="sdesc" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>

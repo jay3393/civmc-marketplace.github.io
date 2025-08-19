@@ -38,6 +38,12 @@ export default function Home() {
             Register your settlement and explore others across CivMC.
           </p>
         </Link>
+        <Link href="/waitlist" className="rounded-lg border p-6 hover:bg-muted/50 transition">
+          <div className="text-xl font-semibold mb-2">SaaS Waitlist</div>
+          <p className="text-sm text-muted-foreground">
+            Get early access to premium features. Join with Discord.
+          </p>
+        </Link>
       </div>
     </div>
   );

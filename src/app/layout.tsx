@@ -45,6 +45,12 @@ export default function RootLayout({
               </div>
             </nav>
           </header>
+          <div className="bg-black border-b border-black">
+            <div className="container mx-auto px-4 py-2 text-white text-sm text-center">
+              <span className="font-bold">Alpha:</span> This site is an MVP. Expect bugs and unpolished features while we iterate.
+              <Link href="https://discord.gg/cSCADcsJ" className="text-blue-500"> Join our Discord</Link>
+            </div>
+          </div>
           <div className="py-3">
             <UsernamePrompt />
           </div>

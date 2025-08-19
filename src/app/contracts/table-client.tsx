@@ -114,7 +114,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
       <span
         className={
           `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ` +
-          (isReq ? `bg-blue-500 text-white` : `bg-green-500 text-white`)
+          (isReq ? `bg-blue-600 text-white` : `bg-green-600 text-white`)
         }
       >
         {value}

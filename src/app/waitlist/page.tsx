@@ -108,17 +108,15 @@ export default function WaitlistPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={featureImages[idx]} alt="Feature" className="w-full h-full object-cover transition-opacity duration-300" />
               </div>
-              {/* Prev/Next */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-between p-2">
-                <button onClick={prev} className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/80 backdrop-blur shadow hover:bg-white transition" aria-label="Previous">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                </button>
-                <button onClick={next} className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/80 backdrop-blur shadow hover:bg-white transition" aria-label="Next">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
-                </button>
-              </div>
+            </div>
+            {/* Prev/Next (inside the card) */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-between p-3">
+              <button onClick={prev} className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border bg-white/90 text-slate-900 shadow-lg hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Previous">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+              </button>
+              <button onClick={next} className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border bg-white/90 text-slate-900 shadow-lg hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Next">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+              </button>
             </div>
             {/* Dots */}
             <div className="mt-3 flex items-center justify-center gap-2">

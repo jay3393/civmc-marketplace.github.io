@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { LOCK_TO_WAITLIST_FLAG } from "../../lock.config";
+import FooterShell from "./footer-shell";
 
 function isTruthy(value: string | undefined) {
   if (!value) return false;
@@ -61,6 +62,7 @@ export default function MainShell({ children }: { children: React.ReactNode }) {
         <div className="absolute bottom-10 left-1/3 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl"/>
       </div>
       {children}
+      <FooterShell />
     </main>
   );
 } 

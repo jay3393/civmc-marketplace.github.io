@@ -27,14 +27,16 @@ type SettlementRow = {
   active?: boolean | null;
   tags?: string[] | null;
   size?: "small" | "medium" | "large" | null;
+  net_worth_diamonds?: number | null; // optional if available in view
+  flag_url?: string | null; // optional if available in view
 };
 
 const TAGS = [
-  { key: "newbie", label: "Newbie friendly" },
-  { key: "rail", label: "Rail station" },
-  { key: "market", label: "Market/Trade" },
-  { key: "buildings", label: "Buildings" },
-  { key: "pvp", label: "PvP" },
+  { key: "newbie", label: "✨ Newbie friendly" },
+  { key: "rail", label: "🚂 Rail station" },
+  { key: "market", label: "💰 Market/Trade" },
+  { key: "buildings", label: "🏠 Buildings" },
+  { key: "pvp", label: "⚔️ PvP" },
 ] as const;
 
 const SIZES = ["small", "medium", "large"] as const;
@@ -84,6 +86,25 @@ function normalizeDiscord(url: string | null | undefined): string | null {
   return `https://discord.gg/${url}`;
 }
 
+function ActiveDot({ active }: { active: boolean }) {
+  return (
+    <span
+      className={`inline-block h-2.5 w-2.5 rounded-full ring-2 ${
+        active ? "bg-emerald-500 ring-emerald-200" : "bg-rose-500 ring-rose-200"
+      }`}
+      aria-label={active ? "Active" : "Dormant"}
+    />
+  );
+}
+
+function Diamond({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12 3l3.5 3H20l-8 15L4 6h4.5L12 3z"/>
+    </svg>
+  );
+}
+
 export default function SettlementsPage() {
   const [q, setQ] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -115,6 +136,26 @@ export default function SettlementsPage() {
     });
   }, [data, q, selectedTags, selectedSizes]);
 
+  // Default sorting: active first, then by net worth (fallback to member_count)
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    function getNetWorth(row: SettlementRow): number {
+      const n = typeof row.net_worth_diamonds === "number" ? row.net_worth_diamonds : (row.member_count ?? 0);
+      return n || 0;
+    }
+    arr.sort((a, b) => {
+      const aActive = Boolean(a.active);
+      const bActive = Boolean(b.active);
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      const bnw = getNetWorth(b) - getNetWorth(a);
+      if (bnw !== 0) return bnw;
+      const an = (a.nation_name ?? "").localeCompare(b.nation_name ?? "");
+      if (an !== 0) return an;
+      return (a.settlement_name ?? "").localeCompare(b.settlement_name ?? "");
+    });
+    return arr;
+  }, [filtered]);
+
   function toggleTag(key: string) {
     setSelectedTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
@@ -124,131 +165,166 @@ export default function SettlementsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-center">
-        <div className="flex w-full max-w-xl items-center gap-2">
-          <Input
-            placeholder="Search nations or settlements"
-            className="h-10 placeholder:text-muted-foreground"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <Button className="h-10" onClick={() => setQ((prev) => prev.trim())}>
-            <Search className="h-4 w-4" />
-          </Button>
+    <div className="relative min-h-screen w-full overflow-auto">
+
+      <div className="relative grid gap-6 p-6 sm:p-8">
+        {/* Hero */}
+        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700">
+          <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-emerald-500/30 blur-3xl"/>
+          <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-cyan-500/30 blur-3xl"/>
+          <div className="relative p-6 sm:p-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/90">
+              Settlements • Nations • Community
+            </div>
+            <h1 className="mt-3 text-2xl sm:text-4xl font-semibold tracking-tight text-white">
+              Discover thriving nations and showcase your power
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm sm:text-base text-white/80">
+              Join the civ-wide network of settlements. Show members, activity and recruit.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1"><ActiveDot active={true}/> Active communities</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">✨ Beautiful builds</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">✨ Power / Wealth</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="text-center text-sm">
-        Don&apos;t see your nation/settlement?{' '}
-        <button
-          className="underline text-blue-600 hover:text-blue-700"
-          onClick={() => {
-            setMode("chooser");
-            setRegisterOpen(true);
-          }}
-        >
-          Click here to register your own.
-        </button>
-      </div>
+        {/* Faux filters (functional under the hood) */}
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 inline-flex items-center rounded-lg border bg-background px-3 py-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search nations or settlements…"
+                className="ml-2 w-full bg-transparent outline-none text-sm"
+                aria-label="Search settlements"
+              />
+            </div>
+            <div className="inline-flex flex-wrap gap-2">
+              {TAGS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => toggleTag(t.key)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${selectedTags.includes(t.key) ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-700 border-slate-200"}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-row gap-2 justify-start mt-2">
+            <div className="text-center text-sm">
+              Don&apos;t see your nation/settlement?{' '}
+              <button
+                className="underline text-blue-600 hover:text-blue-700"
+                onClick={() => {
+                  setMode("chooser");
+                  setRegisterOpen(true);
+                }}
+              >
+                Click here to register your own.
+              </button>
+            </div>
+          </div>
+        </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
-        {TAGS.map((t) => (
-          <button
-            key={t.key}
-            className={`h-8 px-3 rounded-md border text-sm ${selectedTags.includes(t.key) ? "bg-muted" : "bg-background"}`}
-            onClick={() => toggleTag(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-2">
-        {SIZES.map((s) => (
-          <button
-            key={s}
-            className={`h-8 px-3 rounded-md border text-sm capitalize ${selectedSizes.includes(s) ? "bg-muted" : "bg-background"}`}
-            onClick={() => toggleSize(s)}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="text-sm text-muted-foreground">Loading settlements…</div>
-      ) : isError ? (
-        <div className="text-sm text-red-600">Failed to load settlements.</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-sm text-muted-foreground text-center">No results found.</div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((row) => {
-            const x = toNumber(row.x);
-            const z = toNumber(row.z);
-            const discordUrl = normalizeDiscord(row.discord);
-            const active = row.active ?? null;
-            const memberCount = row.member_count ?? null;
-            const tags = row.tags ?? [];
-            const nation = row.nation_name ?? "Unknown";
-            return (
-              <div key={`${row.settlement_name}-${x}-${z}`} className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-muted-foreground">{nation}</div>
-                    <div className="text-lg font-semibold leading-tight">{row.settlement_name}</div>
+        {/* Cards grid */}
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground">Loading settlements…</div>
+        ) : isError ? (
+          <div className="text-sm text-red-600">Failed to load settlements.</div>
+        ) : sorted.length === 0 ? (
+          <div className="text-sm text-muted-foreground text-center">No results found.</div>
+        ) : (
+          <div className="mx-auto w-full max-w-6xl grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {sorted.map((row) => {
+              const x = toNumber(row.x);
+              const z = toNumber(row.z);
+              const discordUrl = normalizeDiscord(row.discord);
+              const active = row.active ?? false;
+              const memberCount = row.member_count ?? undefined;
+              const netWorthDiamonds = row.net_worth_diamonds ?? 0;
+              const tags = row.tags ?? [];
+              const nation = row.nation_name ?? "Unknown";
+              const settlement = row.settlement_name ?? "Unknown";
+              const flagUrl = row.flag_url ?? undefined;
+              return (
+                <div key={`${row.settlement_name}-${x}-${z}`} className="group rounded-xl border bg-background overflow-hidden transition hover:shadow-lg">
+                  {/* Top banner with flag (fallback gradient) */}
+                  <div className="relative aspect-[16/8] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {flagUrl ? (
+                      <img src={flagUrl} alt={`${nation} flag`} className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
+                    ) : (
+                      <img src="/images/default_settlement.jpg" className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
+                    )}
+                    {/* Active pill */}
+                    <div className="absolute top-2 left-2 inline-flex items-center gap-2 rounded-full border bg-white/85 backdrop-blur px-2 py-1 text-xs shadow-sm">
+                      <ActiveDot active={active} />
+                      <span className="font-medium text-slate-900">{active ? "Active" : "Dormant"}</span>
+                    </div>
+                    {/* Power / wealth chip */}
+                    <div className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full border bg-white/85 backdrop-blur px-2 py-1 text-xs shadow-sm text-slate-900">
+                      <Diamond className="h-3.5 w-3.5"/>
+                      <span className="font-medium">{netWorthDiamonds.toLocaleString()} d</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {memberCount !== null ? <span>{memberCount} members</span> : null}
-                    <span className="inline-flex items-center gap-1">
-                      <span
-                        className={`inline-block h-2 w-2 rounded-full ${active === null ? "bg-muted-foreground/40" : active ? "bg-green-500" : "bg-red-500"}`}
-                      />
-                      {active === null ? "Unknown" : active ? "Active" : "Inactive"}
-                    </span>
+
+                  <div className="p-3 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xs text-muted-foreground">{nation}</div>
+                        <div className="text-base font-semibold leading-tight truncate">{settlement}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-xs text-muted-foreground">Members</div>
+                        <div className="text-sm font-semibold">{memberCount?.toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    {row.description ? (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{row.description}</p>
+                    ) : null}
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {tags.map((t) => (
+                        <span key={t} className={`inline-flex items-center rounded-full border px-2 py-0.5 bg-slate-50 text-slate-700 border-slate-200`}>{t}</span>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>XZ: {x ?? "-"}, {z ?? "-"}</span>
+                      {discordUrl ? (
+                        <a
+                          href={discordUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-8 px-3 rounded-md border inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 transition"
+                        >
+                          Join {nation.length > 10 ? nation.slice(0, 10) + "..." : nation} Discord
+                        </a>
+                      ) : (
+                        <button className="h-8 px-3 rounded-md border opacity-60 cursor-not-allowed">
+                          Join {nation.length > 10 ? nation.slice(0, 10) + "..." : nation} Discord
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                {row.description ? (
-                  <div className="text-sm text-foreground/90 whitespace-pre-wrap">{row.description}</div>
-                ) : null}
+        {/* Footer note */}
+        <div className="text-center text-[11px] sm:text-xs text-muted-foreground">Live data from the community • Verified with Discord</div>
 
-                <div className="text-xs text-muted-foreground">Coords: {x !== null && z !== null ? `(${x}, ${z})` : "-"}</div>
-
-                {tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {tags.map((t) => (
-                      <Badge key={t} variant="secondary" className="text-xs">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div className="pt-2">
-                  {discordUrl ? (
-                    <a
-                      href={discordUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-3 rounded-md border inline-flex items-center text-sm"
-                    >
-                      Join {nation} Discord
-                    </a>
-                  ) : (
-                    <button className="h-8 px-3 rounded-md border opacity-60 cursor-not-allowed text-sm" title="No Discord provided">
-                      Join {nation} Discord
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <RegisterModal open={registerOpen} onOpenChange={setRegisterOpen} mode={mode} setMode={setMode} />
+        {/* Register modal remains functional */}
+        <RegisterModal open={registerOpen} onOpenChange={setRegisterOpen} mode={mode} setMode={setMode} />
+      </div>
     </div>
   );
 }

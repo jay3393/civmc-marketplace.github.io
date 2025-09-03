@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ type SettlementRow = {
   size?: "small" | "medium" | "large" | null;
   net_worth_diamonds?: number | null; // optional if available in view
   flag_url?: string | null; // optional if available in view
+  updated_at?: string | null; // optional if available in view
 };
 
 const TAGS = [
@@ -251,6 +253,7 @@ export default function SettlementsPage() {
               const nation = row.nation_name ?? "Unknown";
               const settlement = row.settlement_name ?? "Unknown";
               const flagUrl = row.flag_url ?? undefined;
+              const updatedAt = row.updated_at;
               return (
                 <div key={`${row.settlement_name}-${x}-${z}`} className="group rounded-xl border bg-background overflow-hidden transition hover:shadow-lg">
                   {/* Top banner with flag (fallback gradient) */}
@@ -297,6 +300,10 @@ export default function SettlementsPage() {
 
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>XZ: {x ?? "-"}, {z ?? "-"}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Last updated: {updatedAt ? new Date(updatedAt).toLocaleDateString() : "N/A"}</span>
                       {discordUrl ? (
                         <a
                           href={discordUrl}
@@ -339,8 +346,8 @@ function RegisterModal({ open, onOpenChange, mode, setMode }: { open: boolean; o
               <DialogTitle>Register your community</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button className="h-10" onClick={() => setMode("nation")}>Register Nation</Button>
-              <Button className="h-10" onClick={() => setMode("settlement")}>Register Settlement</Button>
+              <Button className="h-10 bg-blue-500 hover:bg-blue-600 text-white" onClick={() => setMode("nation")}>Register Nation</Button>
+              <Button className="h-10 bg-blue-500 hover:bg-blue-600 text-white" onClick={() => setMode("settlement")}>Register Settlement</Button>
             </div>
           </div>
         ) : mode === "nation" ? (
@@ -364,6 +371,9 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [authAlert, setAuthAlert] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [flagFile, setFlagFile] = useState<File | null>(null);
+  const [flagPreview, setFlagPreview] = useState<string | null>(null);
 
   async function signInWithDiscord() {
     const sb = getSupabaseBrowser();
@@ -371,10 +381,24 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
     await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
   }
 
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.currentTarget.files?.[0] ?? null;
+    setFlagFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setFlagPreview(url);
+      // If you later upload to storage, replace this with the uploaded URL
+      setFlagUrl("");
+    } else {
+      setFlagPreview(null);
+    }
+  }
+
   async function submit() {
     setError(null);
     setSuccess(null);
     setAuthAlert(false);
+    toast.info("Submitting nation for review…");
     startTransition(async () => {
       try {
         const req = await getRequestor();
@@ -391,6 +415,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
             x: x.trim() || null,
             z: z.trim() || null,
             discord: discord.trim() || null,
+            // For now, keep flag_url as provided text (if any). File upload would be handled via storage in a later iteration.
             flag_url: flagUrl.trim() || null,
           },
           requestor: req,
@@ -402,10 +427,12 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
           return;
         }
         setSuccess("Application submitted for review.");
+        toast.success("Nation submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
         console.warn("Unexpected submit-application error (nation)", e);
         setError("Failed to submit application. Please try again later.");
+        toast.error("Failed to submit nation.");
       }
     });
   }
@@ -430,29 +457,55 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
       {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
       <div className="grid gap-2">
         <Label htmlFor="nation-name">Nation name</Label>
-        <Input id="nation-name" value={name} onChange={(e) => setName(e.target.value)} />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="grid gap-2">
-          <Label htmlFor="nx">X</Label>
-          <Input id="nx" value={x} onChange={(e) => setX(e.target.value)} />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="nz">Z</Label>
-          <Input id="nz" value={z} onChange={(e) => setZ(e.target.value)} />
-        </div>
+        <Input id="nation-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nation name..."/>
       </div>
       <div className="grid gap-2 max-h-40 overflow-y-auto">
         <Label htmlFor="nd">Description</Label>
-        <Textarea id="nd" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Textarea id="nd" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your nation..." />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label htmlFor="nx">X Coord</Label>
+          <Input id="nx" type="number" min="-20000" max="20000" value={x} onChange={(e) => setX(e.target.value)} placeholder="1234" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="nz">Z Coord</Label>
+          <Input id="nz" type="number" min="-20000" max="20000" value={z} onChange={(e) => setZ(e.target.value)} placeholder="1234" />
+        </div>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="ndu">Discord URL</Label>
-        <Input id="ndu" value={discord} onChange={(e) => setDiscord(e.target.value)} />
+        <Label htmlFor="ndu">Discord Invite Link</Label>
+        <Input id="ndu" value={discord} onChange={(e) => setDiscord(e.target.value)} placeholder="https://discord.gg/hpgK2ebH9g"/>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="flag">Nation flag image URL</Label>
-        <Input id="flag" value={flagUrl} onChange={(e) => setFlagUrl(e.target.value)} />
+        <Label>Upload nation thumbnail</Label>
+        <input ref={fileInputRef} id="flag" type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+        <label htmlFor="flag" className="cursor-pointer">
+          <div className="rounded-lg border bg-white text-slate-900 p-4 hover:bg-slate-50 transition grid gap-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-white">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden>
+                  <path d="M12 3l4 4h-3v6h-2V7H8l4-4zm-7 8h2v7h10v-7h2v9H5v-9z"/>
+                </svg>
+              </div>
+              <div className="text-sm">
+                <div className="font-medium">Click to select an image</div>
+                <div className="text-xs text-muted-foreground">PNG, JPG, or GIF. Max a few MB.</div>
+              </div>
+            </div>
+            {flagFile ? (
+              <div className="grid gap-2">
+                <div className="text-xs text-muted-foreground">Selected: {flagFile.name}</div>
+                {flagPreview ? (
+                  <div className="relative h-28 w-full overflow-hidden rounded border bg-muted/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={flagPreview} alt="Preview" className="absolute inset-0 h-full w-full object-cover" />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </label>
       </div>
       <div className="flex items-center justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onBack}>Back</Button>
@@ -502,6 +555,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
     setError(null);
     setSuccess(null);
     setAuthAlert(false);
+    toast.info("Submitting settlement for review…");
     startTransition(async () => {
       try {
         const req = await getRequestor();
@@ -532,10 +586,12 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
           return;
         }
         setSuccess("Application submitted for review.");
+        toast.success("Settlement submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
         console.warn("Unexpected submit-application error (settlement)", e);
         setError("Failed to submit application. Please try again later.");
+        toast.error("Failed to submit settlement.");
       }
     });
   }
@@ -595,28 +651,28 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
 
       <div className="grid gap-2">
         <Label htmlFor="sname">Settlement name</Label>
-        <Input id="sname" value={settlementName} onChange={(e) => setSettlementName(e.target.value)} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="grid gap-2">
-          <Label htmlFor="sx">X</Label>
-          <Input id="sx" value={x} onChange={(e) => setX(e.target.value)} />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="sz">Z</Label>
-          <Input id="sz" value={z} onChange={(e) => setZ(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="sdiscord">Discord URL</Label>
-        <Input id="sdiscord" value={discord} onChange={(e) => setDiscord(e.target.value)} />
+        <Input id="sname" value={settlementName} onChange={(e) => setSettlementName(e.target.value)} placeholder="Settlement name..."/>
       </div>
 
       <div className="grid gap-2 max-h-40 overflow-y-auto">
         <Label htmlFor="sdesc">Description</Label>
-        <Textarea id="sdesc" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Textarea id="sdesc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your settlement..." />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label htmlFor="sx">X Coord</Label>
+          <Input id="sx" type="number" min="-20000" max="20000" value={x} onChange={(e) => setX(e.target.value)} placeholder="1234" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="sz">Z Coord</Label>
+          <Input id="sz" type="number" min="-20000" max="20000" value={z} onChange={(e) => setZ(e.target.value)} placeholder="1234" />
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="sdiscord">Discord Invite Link</Label>
+        <Input id="sdiscord" value={discord} onChange={(e) => setDiscord(e.target.value)} placeholder="https://discord.gg/hpgK2ebH9g"/>
       </div>
 
       <div className="grid gap-2">

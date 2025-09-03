@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/command";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSupabaseUser } from "@/components/auth/auth-button";
+import { toast } from "sonner";
 
 const CATEGORY_OPTIONS = [
   "Building",
@@ -159,6 +160,7 @@ export default function CreateContract() {
   async function onSubmit() {
     setError(null);
     setSuccess(null);
+    toast.info("Creating contract…");
     startTransition(async () => {
       try {
         const createdBy = await resolveCreatedById();
@@ -204,10 +206,13 @@ export default function CreateContract() {
           // Contract is created; Discord failed — warn but don't roll back
           console.warn("Discord post failed", fxError);
           setSuccess("Contract created. (Heads up: Discord post failed — try re‑posting from the contract page.)");
+          toast.warning("Contract created, but Discord post failed.");
         } else if (fxData?.already_posted) {
           setSuccess("Contract created. Already posted to Discord.");
+          toast.success("Contract created (already posted to Discord)");
         } else {
           setSuccess("Contract created and posted to Discord.");
+          toast.success("Contract created and posted to Discord");
         }
 
         setOpen(false);
@@ -217,9 +222,11 @@ export default function CreateContract() {
         const message = e instanceof Error ? e.message : "Could not create contract. Please try again.";
         if (message.toLowerCase().includes("not authenticated")) {
           setError("You must be logged in to create a contract.");
+          toast.error("Please log in to create a contract");
         } else {
           console.error("Unexpected error creating contract", e);
           setError("Could not create contract. Please try again.");
+          toast.error("Failed to create contract");
         }
       }
     });
@@ -264,11 +271,6 @@ export default function CreateContract() {
           )}
 
           <div className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" value={form.title} onChange={(e) => onChange("title", e.target.value)} />
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Type</Label>
@@ -323,8 +325,13 @@ export default function CreateContract() {
             </div>
 
             <div className="grid gap-1.5">
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" value={form.title} onChange={(e) => onChange("title", e.target.value)} placeholder="Contract title..."/>
+            </div>
+
+            <div className="grid gap-1.5">
               <Label htmlFor="description">Description</Label>
-              <Textarea id="description" value={form.description} onChange={(e) => onChange("description", e.target.value)} className="max-h-[200px] overflow-y-auto" />
+              <Textarea id="description" value={form.description} onChange={(e) => onChange("description", e.target.value)} className="max-h-[200px] overflow-y-auto" placeholder="Describe your contract..."/>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

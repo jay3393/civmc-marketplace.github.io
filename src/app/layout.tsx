@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { Geist, Geist_Mono } from "next/font/google";
 import MainShell from "./main-shell";
 import LockGuard from "./lock-guard";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "CivHub",
@@ -27,6 +28,7 @@ export default function RootLayout({
           <HeaderShell />
           <MainShell>{children}</MainShell>
         </Providers>
+        <Toaster richColors closeButton position="top-center" />
       </body>
     </html>
   );

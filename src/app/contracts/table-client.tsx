@@ -130,7 +130,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
     if (metaUrl) return metaUrl;
     const threadId = c.discord_thread_id || null;
     const guildId = process.env.NEXT_PUBLIC_DISCORD_GUILD_ID as string | undefined;
-    if (threadId && guildId) return `discord.com/channels/${guildId}/${threadId}`;
+    if (threadId && guildId) return `https://discord.com/channels/${guildId}/${threadId}`;
     return null;
   }
 
@@ -166,7 +166,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
               if (url && user) {
                 return (
                   <Button className="h-8 rounded-md border bg-blue-600 text-white px-3 text-xs hover:bg-blue-500 transition" onClick={() => {
-                    window.open(`discord://${url}`, '_blank');
+                    window.open(url, '_blank');
                   }}>
                     View on Discord
                   </Button>              

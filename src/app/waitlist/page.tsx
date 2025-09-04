@@ -9,11 +9,11 @@ export default function WaitlistPage() {
   const [joining, setJoining] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const featureImages = [
-      "https://iili.io/FyH8Nsf.png",
-        "https://iili.io/FyH8VRt.png",
-        "https://iili.io/FyH8WOX.png",
-        "https://iili.io/FyH8MJI.png",
-        "https://iili.io/FyH8EUN.png",
+    "/waitlist/feature1.png",
+    "/waitlist/feature2.png",
+    "/waitlist/feature3.png",
+    "/waitlist/feature4.png",
+    "/waitlist/feature5.png",
   ];
   const [idx, setIdx] = useState(0);
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);

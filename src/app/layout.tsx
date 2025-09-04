@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "CivHub",
-  description: "Marketplace and rail routes for CivHub",
+  description: "Marketplace and all things CivHub",
 };
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });

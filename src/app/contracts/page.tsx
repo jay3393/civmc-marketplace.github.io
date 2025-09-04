@@ -66,7 +66,7 @@ export default function ContractsPage() {
         </div>
 
         {/* Thread list (functional) */}
-        <div className="mx-auto w-full max-w-5xl">
+        <div className="mx-auto w-full max-w-7xl">
           <ContractsTable searchQuery={search} category={category} />
         </div>
 

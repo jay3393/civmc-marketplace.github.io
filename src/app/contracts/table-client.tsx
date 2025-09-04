@@ -135,7 +135,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl divide-y rounded-xl border bg-background overflow-hidden">
+    <div className="mx-auto w-full max-w-7xl divide-y rounded-xl border bg-background overflow-hidden">
       {filtered.map((c) => (
         <div key={c.id} className="group relative grid gap-2 p-4 sm:p-5">
           {/* Accent bar by type */}

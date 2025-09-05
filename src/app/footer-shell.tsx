@@ -1,6 +1,6 @@
 export default function FooterShell() {
   const year = new Date().getFullYear();
-  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || "https://discord.gg/cSCADcsJ";
+  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || "https://discord.gg/8s7NYH5DFb";
   const botInvite = process.env.NEXT_PUBLIC_BOT_INVITE_URL || "#";
 
   return (

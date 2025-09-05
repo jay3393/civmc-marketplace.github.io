@@ -21,12 +21,18 @@ export default function WaitlistPage() {
   useEffect(() => {
     async function fetchWaitlistCount() {
       const sb = getSupabaseBrowser();
-      const { data, error } = await sb.from("profiles").select("*");
+      const { count, error } = await sb
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
       if (error) {
         console.error("Error fetching waitlist count:", error);
         return;
       }
-      setWaitlistCount(data.length);
+      if (count !== null) {
+        setWaitlistCount(count);
+      } else {
+        setWaitlistCount(null);
+      }
     }
     fetchWaitlistCount();
   }, []);

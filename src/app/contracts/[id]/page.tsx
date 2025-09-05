@@ -58,10 +58,10 @@ function useContract(contractId: string) {
 
 function discordThreadUrl(c: ContractDetail): string | null {
   const metaUrl = (c.metadata?.discord_thread_url as string | undefined) ?? undefined;
-  if (metaUrl) return metaUrl;
+  if (metaUrl) return metaUrl.replace(/^discord:\/\//, "https://");
   const threadId = c.discord_thread_id || null;
   const guildId = process.env.NEXT_PUBLIC_DISCORD_GUILD_ID as string | undefined;
-  if (threadId && guildId) return `discord://discord.com/channels/${guildId}/${threadId}`;
+  if (threadId && guildId) return `https://discord.com/channels/${guildId}/${threadId}`;
   return null;
 }
 

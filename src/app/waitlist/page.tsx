@@ -37,7 +37,7 @@ export default function WaitlistPage() {
       setMessage(null);
       const sb = getSupabaseBrowser();
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-      const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
+      const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
       if (error) {
         setMessage("Could not start Discord sign-in. Please try again.");
       }

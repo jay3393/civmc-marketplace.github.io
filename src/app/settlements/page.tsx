@@ -378,7 +378,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
   async function signInWithDiscord() {
     const sb = getSupabaseBrowser();
     const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
+    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
   }
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -548,7 +548,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
   async function signInWithDiscord() {
     const sb = getSupabaseBrowser();
     const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } });
+    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
   }
 
   async function submit() {

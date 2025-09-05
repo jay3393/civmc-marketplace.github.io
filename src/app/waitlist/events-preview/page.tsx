@@ -59,7 +59,7 @@ const MOCK_EVENTS: EventItem[] = [
 		status: "Live",
 		description: "Join us atop Snowspire for vows, fireworks, and cake. All welcome!",
 		discordUrl: "#",
-		imageUrl: "https://media.discordapp.net/attachments/1405047462938546206/1405128438381285406/2025-08-13_09.34.46.png?ex=68a59c55&is=68a44ad5&hm=cf0420db0131a9de92f0cead199d3ffe0f4ad25a62fd0ed7ebefdc71ac944fed&=&format=webp&quality=lossless&width=2566&height=1444",
+                imageUrl: "/images/events_preview_1.png",
 	},
 	{
 		title: "Wedding Ceremony: Heikki — Snowspire",
@@ -70,7 +70,7 @@ const MOCK_EVENTS: EventItem[] = [
 		status: "Upcoming",
 		description: "Bracket play continues. Bring your A-game and your fans!",
 		discordUrl: "#",
-		imageUrl: "https://cdn.discordapp.com/attachments/1405047462938546206/1405047901784248480/Screenshot_2025-08-13_000812.png?ex=68a5fa14&is=68a4a894&hm=e738686314035428a7d5b99ae1ec9862cf022b05639385d421ea43ceab76eef4&",
+                imageUrl: "/images/events_preview_2.png",
 	},
 	{
 		title: "Trade Fair Weekend",
@@ -81,7 +81,7 @@ const MOCK_EVENTS: EventItem[] = [
 		status: "Upcoming",
 		description: "Stalls, auctions, and rare goods. Vendor registration open now.",
 		discordUrl: "#",
-		imageUrl: "https://media.discordapp.net/attachments/1405047462938546206/1405127532839178351/2025-08-13_09.31.56.png?ex=68a59b7d&is=68a449fd&hm=2374f110331b4b5945d571ce42b394fc5e3189ad7a11b66730e89c4687f025b2&=&format=webp&quality=lossless&width=2566&height=1444",
+                imageUrl: "/images/events_preview_3.png",
 	},
 	{
 		title: "War Council: Southern Pact",
@@ -92,7 +92,7 @@ const MOCK_EVENTS: EventItem[] = [
 		status: "Upcoming",
 		description: "Strategic briefing and alliance coordination. Limited attendance.",
 		discordUrl: "#",
-		imageUrl: "https://iili.io/FpVPr1R.png",
+                imageUrl: "/images/events_preview_4.png",
 	},
 ];
 

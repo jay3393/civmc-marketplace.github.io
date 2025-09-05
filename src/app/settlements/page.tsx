@@ -84,8 +84,34 @@ function toNumber(val: number | string | null | undefined): number | null {
 
 function normalizeDiscord(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return `https://discord.gg/${url}`;
+  const trimmed = url.trim();
+
+  // If this looks like a raw invite code (no dots or slashes), assume it's an invite
+  if (/^[\w-]+$/.test(trimmed)) {
+    return `https://discord.gg/${encodeURIComponent(trimmed)}`;
+  }
+
+  try {
+    // Ensure URL can be parsed even if scheme is missing
+    const candidate = trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    const host = parsed.hostname.toLowerCase();
+    const allowed =
+      host === "discord.gg" ||
+      host.endsWith(".discord.gg") ||
+      host === "discord.com" ||
+      host.endsWith(".discord.com");
+
+    if (!allowed) return null;
+
+    // Always render as https
+    return `https://${host}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    // If parsing fails, reject the input
+    return null;
+  }
 }
 
 function ActiveDot({ active }: { active: boolean }) {

@@ -6,6 +6,8 @@ import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { Button } from "@/components/ui/button";
 import { getTimestampLocalTimezone } from "@/lib/utils";
+import type { ProviderSession, UserMetadata } from "@/data/auth";
+import Image from "next/image";
 
 export type ContractRow = {
   id: string;
@@ -132,8 +134,9 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
         setCheckingGuild(true);
         const sb = getSupabaseBrowser();
         const { data: sess } = await sb.auth.getSession();
-        const providerToken = (sess.session as any)?.provider_token as string | undefined;
-        const discordId = (user.user_metadata as any)?.provider_id || (user.user_metadata as any)?.sub || null;
+        const providerToken = (sess.session as ProviderSession | null | undefined)?.provider_token;
+        const meta = user?.user_metadata as UserMetadata | undefined;
+        const discordId = meta?.provider_id ?? meta?.sub ?? null;
         if (!discordId) { setInGuild(null); setCheckingGuild(false); return; }
         const { data: fx, error } = await sb.functions.invoke("verify-guild", {
           body: { discord_user_id: String(discordId), provider_token: providerToken, join_if_needed: false },
@@ -180,8 +183,9 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
     try {
       const sb = getSupabaseBrowser();
       const { data: sess } = await sb.auth.getSession();
-      const providerToken = (sess.session as any)?.provider_token as string | undefined;
-      const discordId = (user.user_metadata as any)?.provider_id || (user.user_metadata as any)?.sub || null;
+      const providerToken = (sess.session as ProviderSession | null | undefined)?.provider_token;
+      const meta = user?.user_metadata as UserMetadata | undefined;
+      const discordId = meta?.provider_id ?? meta?.sub ?? null;
       if (!discordId) {
         window.open(INVITE_URL, "_blank");
         return;
@@ -216,7 +220,7 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
             <CategoryBadge value={c.category} />
             <span className="ml-auto inline-flex items-center gap-1 rounded-full border bg-white/85 backdrop-blur px-2 py-0.5 text-[11px] text-slate-900">
               {/* Map current name to icon */}
-              <img src={getCurrencyImagePath(c.currency?.name ?? "")} alt={c.currency?.name ?? ""} className="h-3 w-3" />
+              <Image src={getCurrencyImagePath(c.currency?.name ?? "")} alt={c.currency?.name ?? ""} width={12} height={12} className="h-3 w-3" />
               {c.budget_amount > 0 ? `${c.budget_amount.toLocaleString()} ${c.currency?.name ?? ""}` : "—"}
             </span>
           </div>

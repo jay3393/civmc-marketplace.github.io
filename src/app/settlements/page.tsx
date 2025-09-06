@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +40,6 @@ const TAGS = [
   { key: "buildings", label: "🏠 Buildings" },
   { key: "pvp", label: "⚔️ PvP" },
 ] as const;
-
-const SIZES = ["small", "medium", "large"] as const;
 
 async function fetchSettlements(): Promise<SettlementRow[]> {
   const sb = getSupabaseBrowser();
@@ -136,7 +134,7 @@ function Diamond({ className = "h-4 w-4" }: { className?: string }) {
 export default function SettlementsPage() {
   const [q, setQ] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedSizes] = useState<string[]>([]);
 
   const [registerOpen, setRegisterOpen] = useState(false);
   const [mode, setMode] = useState<"chooser" | "nation" | "settlement">("chooser");
@@ -186,10 +184,6 @@ export default function SettlementsPage() {
 
   function toggleTag(key: string) {
     setSelectedTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-  }
-
-  function toggleSize(val: string) {
-    setSelectedSizes((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));
   }
 
   return (
@@ -284,11 +278,10 @@ export default function SettlementsPage() {
                 <div key={`${row.settlement_name}-${x}-${z}`} className="group rounded-xl border bg-background overflow-hidden transition hover:shadow-lg">
                   {/* Top banner with flag (fallback gradient) */}
                   <div className="relative aspect-[16/8] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     {flagUrl ? (
-                      <img src={flagUrl} alt={`${nation} flag`} className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
+                      <Image src={flagUrl} alt={`${nation} flag`} fill className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
                     ) : (
-                      <img src="/images/default_settlement.jpg" className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
+                      <Image src="/images/default_settlement.jpg" alt="Default settlement" fill className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
                     )}
                     {/* Active pill */}
                     <div className="absolute top-2 left-2 inline-flex items-center gap-2 rounded-full border bg-white/85 backdrop-blur px-2 py-1 text-xs shadow-sm">

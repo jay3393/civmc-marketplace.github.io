@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { useSupabaseUser } from "@/components/auth/auth-button";
@@ -37,8 +37,8 @@ export type ContractRow = {
 
 async function signInWithDiscord() {
   const sb = getSupabaseBrowser();
-  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-  await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
+  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/contracts` : undefined;
+  await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
 }
 
 async function fetchContracts(): Promise<ContractRow[]> {
@@ -87,11 +87,22 @@ function CategoryBadge({ value }: { value: string }) {
   return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${cls}`}>{value}</span>;
 }
 
+function threadUrlFor(c: ContractRow): string | null {
+  const metaUrl = (c.metadata?.discord_thread_url as string | undefined) ?? undefined;
+  if (metaUrl) return metaUrl.replace(/^https?:\/\//, "");
+  const threadId = c.discord_thread_id || null;
+  const guildId = process.env.NEXT_PUBLIC_DISCORD_GUILD_ID as string | undefined;
+  if (threadId && guildId) return `discord.com/channels/${guildId}/${threadId}`;
+  return null;
+}
+
+const INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || "https://discord.gg/8s7NYH5DFb";
+const IN_GUILD_STORAGE_KEY = "civhub-in-guild-v1";
+
 export default function ContractsTable({ searchQuery = "", category = null }: Props) {
   const { data, isLoading, isError } = useQuery({ queryKey: ["contracts"], queryFn: fetchContracts });
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const user = useSupabaseUser();
-  
+    
   const currencyMapNameToImage = {
     "diamond": "Diamond_JE3_BE3.png",
     "essence": "Eye_of_Ender_JE2_BE2.png",
@@ -101,6 +112,46 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
   const getCurrencyImagePath = (name: string) => {
     return `/images/${currencyMapNameToImage[name as keyof typeof currencyMapNameToImage]}`;
   }
+  const [inGuild, setInGuild] = useState<boolean | null>(null);
+  const [checkingGuild, setCheckingGuild] = useState(false);
+
+  useEffect(() => {
+    async function ensureGuildStatus() {
+      if (!user) { setInGuild(null); return; }
+      try {
+        // Use cached token if valid
+        const cached = localStorage.getItem(IN_GUILD_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached) as { token: string; exp: number; in_guild: boolean };
+          const now = Math.floor(Date.now() / 1000);
+          if (parsed?.exp && parsed.exp > now) {
+            setInGuild(Boolean(parsed.in_guild));
+            return;
+          }
+        }
+        setCheckingGuild(true);
+        const sb = getSupabaseBrowser();
+        const { data: sess } = await sb.auth.getSession();
+        const providerToken = (sess.session as any)?.provider_token as string | undefined;
+        const discordId = (user.user_metadata as any)?.provider_id || (user.user_metadata as any)?.sub || null;
+        if (!discordId) { setInGuild(null); setCheckingGuild(false); return; }
+        const { data: fx, error } = await sb.functions.invoke("verify-guild", {
+          body: { discord_user_id: String(discordId), provider_token: providerToken, join_if_needed: false },
+        });
+        if (!error && fx?.token) {
+          localStorage.setItem(IN_GUILD_STORAGE_KEY, JSON.stringify({ token: fx.token, exp: fx.exp, in_guild: fx.in_guild }));
+          setInGuild(Boolean(fx.in_guild));
+        } else {
+          setInGuild(null);
+        }
+      } catch {
+        setInGuild(null);
+      } finally {
+        setCheckingGuild(false);
+      }
+    }
+    ensureGuildStatus();
+  }, [user, user?.user_metadata]);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -125,13 +176,32 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
   if (!filtered || filtered.length === 0)
     return <div className="text-sm text-muted-foreground">No contracts match your filters.</div>;
 
-  function threadUrlFor(c: ContractRow): string | null {
-    const metaUrl = (c.metadata?.discord_thread_url as string | undefined) ?? undefined;
-    if (metaUrl) return metaUrl;
-    const threadId = c.discord_thread_id || null;
-    const guildId = process.env.NEXT_PUBLIC_DISCORD_GUILD_ID as string | undefined;
-    if (threadId && guildId) return `https://discord.com/channels/${guildId}/${threadId}`;
-    return null;
+  async function attemptJoinAndOpen(url: string | null) {
+    try {
+      const sb = getSupabaseBrowser();
+      const { data: sess } = await sb.auth.getSession();
+      const providerToken = (sess.session as any)?.provider_token as string | undefined;
+      const discordId = (user.user_metadata as any)?.provider_id || (user.user_metadata as any)?.sub || null;
+      if (!discordId) {
+        window.open(INVITE_URL, "_blank");
+        return;
+      }
+      const { data: fx } = await sb.functions.invoke("verify-guild", {
+        body: { discord_user_id: String(discordId), provider_token: providerToken, join_if_needed: true },
+      });
+      if (fx?.token) {
+        localStorage.setItem(IN_GUILD_STORAGE_KEY, JSON.stringify({ token: fx.token, exp: fx.exp, in_guild: fx.in_guild }));
+      }
+      const okInGuild = Boolean(fx?.in_guild);
+      if (okInGuild && url) {
+        window.open(`https://${url}`, "_blank");
+      } else {
+        // Open invite first; the user can return and click again to deep link
+        window.open(INVITE_URL, "_blank");
+      }
+    } catch {
+      window.open(INVITE_URL, "_blank");
+    }
   }
 
   return (
@@ -159,30 +229,30 @@ export default function ContractsTable({ searchQuery = "", category = null }: Pr
           <p className="pl-2 sm:pl-3 text-sm text-muted-foreground line-clamp-2">{c.description ?? "-"}</p>
 
           <div className="pl-2 sm:pl-3 flex items-center justify-between text-xs text-muted-foreground">
-            {/* <span>{c.deadline ? `Due: ${c.deadline}` : "ASAP"}</span> */}
+            
             <span>Posted: {getTimestampLocalTimezone(c.created_at)}</span>
             {(() => {
               const url = threadUrlFor(c);
-              if (url && user) {
+              if (url) {
+                if (!user) {
+                  return (
+                    <Button className="h-8 rounded-md border bg-blue-600 text-white px-3 text-xs hover:bg-blue-500 transition" onClick={() => signInWithDiscord()}>Login to view</Button>
+                  );
+                }
+                if (inGuild === true) {
+                  return (
+                    <Button className="h-8 rounded-md border bg-blue-600 text-white px-3 text-xs hover:bg-blue-500 transition" onClick={() => window.open(`https://${url}`, "_blank")}>View on Discord</Button>
+                  );
+                }
+                // Not known to be in guild or not: attempt join flow
                 return (
-                  <Button className="h-8 rounded-md border bg-blue-600 text-white px-3 text-xs hover:bg-blue-500 transition" onClick={() => {
-                    window.open(url, '_blank');
-                  }}>
-                    View on Discord
-                  </Button>              
-                );
-              }
-              if (!user) {
-                return (
-                  <Button className="h-8 rounded-md border bg-blue-600 text-white px-3 text-xs hover:bg-blue-500 transition" onClick={signInWithDiscord}>
-                    Login with Discord to view
+                  <Button className="h-8 rounded-md border bg-blue-600 text-white px-3 text-xs hover:bg-blue-500 transition" disabled={checkingGuild} onClick={() => attemptJoinAndOpen(url)}>
+                    {inGuild === false ? "Join server to view" : "View on Discord"}
                   </Button>
                 );
               }
               return (
-                <Button className="h-8 rounded-md border opacity-60 cursor-not-allowed px-3 text-xs" title="Not yet posted to Discord">
-                  View on Discord
-                </Button>
+                <Button className="h-8 rounded-md border opacity-60 cursor-not-allowed px-3 text-xs" title="Not yet posted to Discord">View on Discord</Button>
               );
             })()}
           </div>

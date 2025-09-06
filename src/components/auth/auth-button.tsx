@@ -20,6 +20,9 @@ export function useSupabaseUser() {
 type DiscordUserMetadata = {
   user_name?: string;
   avatar_url?: string;
+  custom_claims?: {
+    global_name?: string;
+  };
 };
 
 export default function AuthButton() {
@@ -27,15 +30,15 @@ export default function AuthButton() {
   const user = useSupabaseUser();
 
   const meta = (user?.user_metadata ?? {}) as DiscordUserMetadata;
-  const username = meta.user_name ?? null;
+  const username = meta.custom_claims?.global_name ?? null;
   const avatarUrl = meta.avatar_url ?? null;
 
   async function signInWithDiscord() {
     try {
       setLoading(true);
       const sb = getSupabaseBrowser();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-      const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
+      const redirectTo = typeof window !== "undefined" ? `${window.location.href}` : undefined;
+      const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
       if (error) {
         console.error("Auth error", error);
         setLoading(false);

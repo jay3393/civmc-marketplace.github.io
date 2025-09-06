@@ -6,6 +6,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import MainShell from "./main-shell";
 import LockGuard from "./lock-guard";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: "CivHub",
@@ -29,6 +30,7 @@ export default function RootLayout({
           <MainShell>{children}</MainShell>
         </Providers>
         <Toaster richColors closeButton position="top-center" />
+        <Analytics />
       </body>
     </html>
   );

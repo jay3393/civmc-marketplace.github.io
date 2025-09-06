@@ -26,24 +26,35 @@ const RATES = {
 
 export default function MarketplacePage() {
   return (
-    <div className="relative space-y-6">
-      {/* Ambient page glow */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-500/25 blur-3xl"/>
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/25 blur-3xl"/>
-      </div>
-      {/* Hero (shorter) */}
+  <div className="relative min-h-screen w-full overflow-auto">
+
+      <div className="relative grid gap-6 p-6 sm:p-8">
+
+      {/* Hero */}
       <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700">
-        <div className="absolute -top-16 -left-16 h-56 w-56 rounded-full bg-blue-500/30 blur-3xl"/>
-        <div className="absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-emerald-500/30 blur-3xl"/>
-        <div className="relative grid gap-2 p-5 sm:p-6">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Marketplace</h1>
-          {/* <p className="text-white/70 max-w-2xl text-sm sm:text-base">Discover player shops across Civhub.</p> */}
+        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-blue-500/30 blur-3xl"/>
+        <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-emerald-500/30 blur-3xl"/>
+        <div className="relative p-6 sm:p-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/90">
+            Marketplace
+          </div>
+          <h1 className="mt-3 text-2xl sm:text-4xl font-semibold tracking-tight text-white">
+            Browse shops, find items, and exchange resources server wide.
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm sm:text-base text-white/80">
+            Buy and sell items in player-run shops – a player-driven economy for CivMC.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">Player-run shops</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">Exchange rates</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">Top demand items</span>
+          </div>
         </div>
       </div>
+      
 
       {/* Content grid with sticky sidebar */}
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[3fr_1fr]">
         {/* Left: shops */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {shops.map((shop) => (
@@ -164,6 +175,7 @@ export default function MarketplacePage() {
       {/* Footer hint */}
       <div className="text-center text-[11px] sm:text-xs text-muted-foreground">Browse player-run shops.</div>
     </div>
+  </div>
   );
 }
 

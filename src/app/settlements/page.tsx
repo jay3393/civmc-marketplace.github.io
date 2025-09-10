@@ -133,12 +133,13 @@ function Diamond({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 export default function SettlementsPage() {
+  const user = useSupabaseUser();
   const [q, setQ] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedSizes] = useState<string[]>([]);
 
   const [registerOpen, setRegisterOpen] = useState(false);
-  const [mode, setMode] = useState<"chooser" | "nation" | "settlement">("chooser");
+  const [mode, setMode] = useState<"chooser" | "nation" | "settlement" | "login">("chooser");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["settlements"], queryFn: fetchSettlements });
 
@@ -241,15 +242,29 @@ export default function SettlementsPage() {
           <div className="flex flex-row gap-2 justify-start mt-2">
             <div className="text-center text-sm">
               Don&apos;t see your nation/settlement?{' '}
-              <button
-                className="underline text-blue-600 hover:text-blue-700"
-                onClick={() => {
-                  setMode("chooser");
-                  setRegisterOpen(true);
-                }}
-              >
-                Click here to register your own.
-              </button>
+              { user ? 
+                <button
+                  className="underline text-blue-600 hover:text-blue-700"
+                  onClick={() => {
+                    setMode("chooser");
+                    setRegisterOpen(true);
+                  }}
+                > 
+                  Click here to register your own.
+                </button>
+              : 
+                <button
+                  className="underline text-blue-600 hover:text-blue-700"
+                  onClick={() => {
+                    setMode("login");
+                    setRegisterOpen(true);
+                  }}
+                > 
+                  Click here to register your own.
+                </button>
+            }
+
+              
             </div>
           </div>
         </div>
@@ -372,8 +387,14 @@ function RegisterModal({ open, onOpenChange, mode, setMode }: { open: boolean; o
           </div>
         ) : mode === "nation" ? (
           <RegisterNation onDone={() => onOpenChange(false)} onBack={() => setMode("chooser")} />
-        ) : (
+        ) : mode === "settlement" ? (
           <RegisterSettlement onDone={() => onOpenChange(false)} onBack={() => setMode("chooser")} />
+        ) : (
+          // login button
+          <div className="flex flex-col items-center justify-center gap-2">
+            <span className="text-sm text-muted-foreground">Please log in with Discord to register a nation or settlement.</span>
+            <AuthButton />
+          </div>
         )}
       </DialogContent>
     </Dialog>
@@ -427,6 +448,21 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
           return;
         }
         const sb = getSupabaseBrowser();
+
+        // Upload the flag to storage, with the applcation id as the filename
+        let fullFlagUrl = null;
+        if (flagFile) {
+          const { data: flagUrl, error: flagError } = await sb.storage.from("settlement-images/nations").upload(`${Date.now()}-${name.trim()}.png`, flagFile);
+          if (flagError) {
+            console.warn("Storage error uploading flag", flagError);
+            setError("Failed to upload flag. Please try again later.");
+            return;
+          }
+          fullFlagUrl = flagUrl.fullPath;
+          setFlagUrl(fullFlagUrl);
+          console.log("flagUrl", fullFlagUrl);
+        }
+
         const payload = {
           kind: "nation" as const,
           data: {
@@ -435,11 +471,11 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
             x: x.trim() || null,
             z: z.trim() || null,
             discord: discord.trim() || null,
-            // For now, keep flag_url as provided text (if any). File upload would be handled via storage in a later iteration.
-            flag_url: flagUrl.trim() || null,
+            flag_url: fullFlagUrl || null,
           },
           requestor: req,
         };
+
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
           console.warn("submit-application nation failed", fxError);
@@ -468,7 +504,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
           <AlertDescription>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-sm">Please log in with Discord to register a nation.</span>
-              <Button size="sm" onClick={signInWithDiscord}>Login with Discord</Button>
+              <AuthButton />
             </div>
           </AlertDescription>
         </Alert>

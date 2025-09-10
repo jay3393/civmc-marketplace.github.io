@@ -341,7 +341,7 @@ export default function MarketplacePage() {
                 <div className="pt-0.5 mt-auto">
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-muted-foreground" />
-                    <span className="inline-flex items-center justify-center h-8 sm:h-9 rounded-md border px-2.5 sm:px-3 text-xs sm:text-sm">View shop</span>
+                    <span className="inline-flex items-center justify-center h-8 sm:h-9 rounded-md border px-2.5 sm:px-3 text-xs sm:text-sm hover:brightness-200">View shop</span>
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-1">Updated: {getTimestampLocalTimezone(shop.last_updated)}</div>
                 </div>

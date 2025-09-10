@@ -38,6 +38,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { toast } from "sonner";
+import AuthButton from "@/components/auth/auth-button";
 
 const CATEGORY_OPTIONS = [
   "Building",
@@ -255,9 +256,9 @@ export default function CreateContract() {
             <Alert className="mb-2">
               <AlertTitle>Sign in required</AlertTitle>
               <AlertDescription>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex flex-col items-center gap-2 mt-2">
                   <span className="text-sm">Please log in with Discord to create a contract.</span>
-                  <Button size="sm" onClick={signInWithDiscord}>Login with Discord</Button>
+                  <AuthButton />
                 </div>
               </AlertDescription>
             </Alert>

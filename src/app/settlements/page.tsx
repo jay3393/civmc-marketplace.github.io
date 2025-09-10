@@ -14,6 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import Image from "next/image";
+import AuthButton, { useSupabaseUser } from "@/components/auth/auth-button";
 
 export const dynamic = "force-dynamic";
 
@@ -626,7 +627,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
           <AlertDescription>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-sm">Please log in with Discord to register a settlement.</span>
-              <Button size="sm" onClick={signInWithDiscord}>Login with Discord</Button>
+              <AuthButton />
             </div>
           </AlertDescription>
         </Alert>

@@ -13,7 +13,7 @@ const INGEST_URL = Deno.env.get("INGEST_URL")!;
 const SUPABASE_BEARER = Deno.env.get("_SUPABASE_BEARER")!;
 const SUPABASE_API_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const INVITE_PERMISSIONS = "326417599488";
+const INVITE_PERMISSIONS = "309237763072";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
@@ -68,7 +68,7 @@ serve(async (req) => {
     if (name === "invite") {
       return respondEphemeral(
         `🔗 **Invite me to your server:**\n${inviteURL()}\n\n` +
-          `> Requires permissions: View Channels, Read Message History, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Embed Links.`,
+          `> Requires permissions: View Channels, Read Message History, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Embed Links, Attach Files.`,
         []
       );
     }
@@ -139,7 +139,8 @@ serve(async (req) => {
     const reviewer_discord_id = body.member?.user?.id ?? body.user?.id ?? null;
     if (!reviewer_discord_id) return respondEphemeral("❌ Missing reviewer.", []);
 
-    // OPTIONAL: check role gating here by inspecting body.member.roles (array of role IDs) and comparing to an allowed list stored in DB
+    // Check if the discord body.member.user has the role "Trusted CivMC Board Member" using role id TRUSTED_CIVMC_BOARD_MEMBER_ROLE_ID
+    if (!body.member?.roles.includes("1415199449696702526")) return respondEphemeral("❌ You are not a trusted CivMC Board Member.", []);
 
     // Upsert review
     const { error: upErr } = await sb.from("application_reviews").upsert({

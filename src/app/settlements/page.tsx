@@ -288,7 +288,7 @@ export default function SettlementsPage() {
               const tags = row.tags ?? [];
               const nation = row.nation_name ?? "Unknown";
               const settlement = row.settlement_name ?? "Unknown";
-              const flagUrl = row.flag_url ?? undefined;
+              const flagUrl = row.flag_url ?? null;
               const updatedAt = row.updated_at;
               return (
                 <div key={`${row.settlement_name}-${x}-${z}`} className="group rounded-xl border bg-background overflow-hidden transition hover:shadow-lg">
@@ -421,8 +421,6 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
     if (file) {
       const url = URL.createObjectURL(file);
       setFlagPreview(url);
-      // If you later upload to storage, replace this with the uploaded URL
-      setFlagUrl("");
     } else {
       setFlagPreview(null);
     }
@@ -452,7 +450,6 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
             return;
           }
           fullFlagUrl = flagUrl.fullPath;
-          setFlagUrl(fullFlagUrl);
           console.log("flagUrl", fullFlagUrl);
         }
 

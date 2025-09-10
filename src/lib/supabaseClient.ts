@@ -7,7 +7,7 @@ const globalForSupabase = globalThis as unknown as {
   __supabase?: SupabaseClient;
 };
 
-export function getSupabaseBrowser() {
+export function getSupabaseBrowser(): ReturnType<typeof createBrowserClient> {
   if (globalForSupabase.__supabase) return globalForSupabase.__supabase;
   if (!client) {
     client = createBrowserClient(

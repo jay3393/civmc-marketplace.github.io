@@ -407,7 +407,6 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
   const [z, setZ] = useState("");
   const [description, setDescription] = useState("");
   const [discord, setDiscord] = useState("");
-  const [flagUrl, setFlagUrl] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -415,12 +414,6 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [flagFile, setFlagFile] = useState<File | null>(null);
   const [flagPreview, setFlagPreview] = useState<string | null>(null);
-
-  async function signInWithDiscord() {
-    const sb = getSupabaseBrowser();
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
-  }
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.currentTarget.files?.[0] ?? null;
@@ -599,12 +592,6 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
     if (n < 30) return "small";
     if (n < 100) return "medium";
     return "large";
-  }
-
-  async function signInWithDiscord() {
-    const sb = getSupabaseBrowser();
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
   }
 
   async function submit() {

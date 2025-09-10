@@ -152,12 +152,6 @@ export default function CreateContract() {
     throw new Error("Profile not found for user");
   }
 
-  async function signInWithDiscord() {
-    const sb = getSupabaseBrowser();
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
-    await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify" } });
-  }
-
   async function onSubmit() {
     setError(null);
     setSuccess(null);

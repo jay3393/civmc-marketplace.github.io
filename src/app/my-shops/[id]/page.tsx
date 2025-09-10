@@ -165,7 +165,6 @@ export default function ManageShopPage() {
       if (error) {
         // Retry without banner_url if backend doesn't have the column
         if (Object.prototype.hasOwnProperty.call(payloadBase, "banner_url")) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete (payloadBase as { [k: string]: unknown }).banner_url;
           await sb.from("shops").update(payloadBase as never).eq("id", shopId);
         }
@@ -236,9 +235,8 @@ export default function ManageShopPage() {
       {/* Banner preview & upload */}
       <div className="rounded-xl border overflow-hidden">
         <div className="relative h-40 sm:h-48 bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {bannerPreview ? (
-            <img src={bannerPreview} alt="Shop banner" className="absolute inset-0 h-full w-full object-cover" />
+            <Image src={bannerPreview} alt="Shop banner" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <Image src="/images/default_settlement.jpg" alt="Shop banner" fill className="absolute inset-0 h-full w-full object-cover" />
           )}
@@ -263,8 +261,7 @@ export default function ManageShopPage() {
                   <div className="text-xs text-muted-foreground">Selected: {bannerFile.name}</div>
                   {bannerPreview ? (
                     <div className="relative h-28 w-full overflow-hidden rounded border bg-muted/40">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={bannerPreview} alt="Preview" className="absolute inset-0 h-full w-full object-cover" />
+                      <Image src={bannerPreview} alt="Preview" className="absolute inset-0 h-full w-full object-cover" />
                     </div>
                   ) : null}
                 </div>

@@ -35,7 +35,7 @@ export default function ShopDetailPage() {
 
   const isOwner = Boolean(user?.id && shop?.owner_id && user.id === shop.owner_id);
 
-  // Owner-only: add/edit/delete item listings (declare hooks before any early returns)
+  // Owner-only: add/edit item listings
   const [itemsCatalog, setItemsCatalog] = useState<Array<{ id: string; name: string; texture_url: string | null }>>([]);
   const [inputItemName, setInputItemName] = useState("");
   const [outputItemId, setOutputItemId] = useState<string | null>(null);
@@ -209,13 +209,6 @@ export default function ShopDetailPage() {
         notes: data.notes ?? it.notes ?? null,
       } : it));
     }
-  }
-
-  async function deleteListing(id: string) {
-    if (!isOwner) return;
-    const sb = getSupabaseBrowser();
-    await sb.from("shop_items").delete().eq("id", id);
-    setItems((prev) => prev.filter((it) => it.id !== id));
   }
 
   function resolveCatalogByName(name: string) {

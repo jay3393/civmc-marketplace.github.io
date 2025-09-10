@@ -67,7 +67,7 @@ async function getRequestor() {
   const profileId = user.id as string;
   // Try to read username from profiles; fallback to discord metadata
   let username: string | null = null;
-  const { data: profile } = await sb.from("profiles").select("username").eq("id", profileId).maybeSingle();
+  const { data: profile }: { data: { username: string } | null } = await sb.from("profiles").select("username").eq("id", profileId).maybeSingle();
   if (profile?.username) username = profile.username as string;
   const meta = (user.user_metadata ?? {}) as { user_name?: string; global_name?: string };
   const discordUsername = meta.global_name || meta.user_name || null;
@@ -441,7 +441,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         const sb = getSupabaseBrowser();
 
         // Upload the flag to storage, with the applcation id as the filename
-        let fullFlagUrl = null;
+        let fullFlagUrl: string | null = null;
         if (flagFile) {
           const { data: flagUrl, error: flagError } = await sb.storage.from("settlement-images/nations").upload(`${Date.now()}-${name.trim()}.png`, flagFile);
           if (flagError) {

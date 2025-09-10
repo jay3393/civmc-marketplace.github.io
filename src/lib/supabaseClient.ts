@@ -7,7 +7,7 @@ const globalForSupabase = globalThis as unknown as {
   __supabase?: SupabaseClient;
 };
 
-export function getSupabaseBrowser(): ReturnType<typeof createBrowserClient> {
+export function getSupabaseBrowser(): SupabaseClient {
   if (globalForSupabase.__supabase) return globalForSupabase.__supabase;
   if (!client) {
     client = createBrowserClient(
@@ -20,10 +20,10 @@ export function getSupabaseBrowser(): ReturnType<typeof createBrowserClient> {
           detectSessionInUrl: true,
         },
       }
-    );
+    ) as unknown as SupabaseClient;
   }
   if (process.env.NODE_ENV !== "production") {
     globalForSupabase.__supabase = client;
   }
-  return client;
+  return client!;
 } 

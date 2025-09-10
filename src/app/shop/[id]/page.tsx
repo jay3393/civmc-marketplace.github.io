@@ -55,6 +55,30 @@ export default function ShopDetailPage() {
   const [editNotes, setEditNotes] = useState("");
   const [editListed, setEditListed] = useState<boolean>(true);
 
+  // create a type for create and update payloads
+  type ShopItemCreatePayload = {
+    id: string;
+    input_item_id: string | null;
+    input_item_name: string;
+    input_qty: number;
+    output_item_id: string | null;
+    output_item_name: string;
+    output_qty: number;
+    stock_qty: number | null;
+    is_listed: boolean;
+    notes: string | null;
+  };
+  type ShopItemUpdatePayload = {
+    id: string;
+    input_item_name: string;
+    input_qty: number;
+    output_item_name: string;
+    output_qty: number;
+    stock_qty: number | null;
+    is_listed: boolean;
+    notes: string | null;
+  };
+
   useEffect(() => {
     type SupaShopItemRow = {
       id: string;
@@ -91,7 +115,7 @@ export default function ShopDetailPage() {
         const sh = s as unknown as DbShop & { banner_url?: string | null };
         setShop(sh);
         // owner username
-        const { data: prof } = await sb.from("profiles").select("username").eq("id", sh.owner_id).maybeSingle();
+        const { data: prof }: { data: { username: string } | null } = await sb.from("profiles").select("username").eq("id", sh.owner_id).maybeSingle();
         setOwnerName((prof?.username as string | undefined) ?? null);
         // items for this shop
         const { data: its } = await sb
@@ -139,7 +163,7 @@ export default function ShopDetailPage() {
     if (!user) return;
     const sb = getSupabaseBrowser();
     const payload = { shop_id: shopId, author_id: user.id, rating: reviewRating, content: reviewText.trim() };
-    const { data, error } = await sb.from("shop_reviews").insert(payload).select("*").single();
+    const { data, error } = await sb.from("shop_reviews").insert(payload as never).select("*").single();
     if (!error && data) {
       setReviews((prev) => [data as unknown as DbShopReview, ...prev]);
       setReviewText("");
@@ -162,7 +186,7 @@ export default function ShopDetailPage() {
       is_listed: true,
       notes: newNotes.trim() || null,
     };
-    const { data, error } = await sb.from("shop_items").insert(payload).select("*").single();
+    const { data, error }: { data: ShopItemCreatePayload | null; error: Error | null } = await sb.from("shop_items").insert(payload as never).select("*").single();
     if (!error && data) {
       setItems((prev) => [
         {
@@ -196,7 +220,7 @@ export default function ShopDetailPage() {
     if (patch.stock !== undefined) dbPatch.stock_qty = patch.stock;
     if (patch.is_listed !== undefined) dbPatch.is_listed = patch.is_listed;
     if (patch.notes !== undefined) dbPatch.notes = patch.notes;
-    const { data } = await sb.from("shop_items").update(dbPatch).eq("id", id).select("*").maybeSingle();
+    const { data }: { data: ShopItemUpdatePayload | null } = await sb.from("shop_items").update(dbPatch as never).eq("id", id).select("*").maybeSingle();
     if (data) {
       setItems((prev) => prev.map((it) => it.id === id ? {
         id: data.id,

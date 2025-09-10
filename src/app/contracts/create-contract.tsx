@@ -134,19 +134,24 @@ export default function CreateContract() {
     const authUser = userData?.user;
     if (!authUser) throw new Error("Not authenticated");
 
-    const { data: profById } = await sb.from("profiles").select("id").eq("id", authUser.id).limit(1).maybeSingle();
-    if (profById?.id) return profById.id as string;
+    const { data: profById }: { data: { id: string } | null } = await sb
+      .from("profiles")
+      .select("id")
+      .eq("id", authUser.id)
+      .limit(1)
+      .maybeSingle();
+    if (profById?.id) return profById.id;
 
     const meta = (authUser.user_metadata ?? {}) as DiscordUserMetadata;
     const discordId = meta.provider_id || meta.sub || null;
     if (discordId) {
-      const { data: profByDiscord } = await sb
+      const { data: profByDiscord }: { data: { id: string } | null } = await sb
         .from("profiles")
         .select("id")
         .eq("discord_user_id", String(discordId))
         .limit(1)
         .maybeSingle();
-      if (profByDiscord?.id) return profByDiscord.id as string;
+      if (profByDiscord?.id) return profByDiscord.id;
     }
 
     throw new Error("Profile not found for user");
@@ -176,9 +181,9 @@ export default function CreateContract() {
         };
 
         // 1) Create contract and RETURN the id so we can post to Discord
-        const { data: inserted, error: insertError } = await supabase
+        const { data: inserted, error: insertError }: { data: { id: string } | null; error: Error | null } = await supabase
         .from("contracts")
-        .insert(payload)
+        .insert(payload as never)
         .select("id")          // important: return id
         .single();             // single row
 

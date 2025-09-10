@@ -21,7 +21,7 @@ export default function UsernamePrompt() {
     async function check() {
       if (!user) return;
       const sb = getSupabaseBrowser();
-      const { data } = await sb.from("profiles").select("username").eq("id", user.id).maybeSingle();
+      const { data }: { data: { username: string } | null } = await sb.from("profiles").select("username").eq("id", user.id).maybeSingle();
       if (data?.username) setVisible(false);
     }
     check();
@@ -35,7 +35,7 @@ export default function UsernamePrompt() {
     startTransition(async () => {
       try {
         const sb = getSupabaseBrowser();
-        const { error } = await sb.from("profiles").update({ username: username.trim() || null }).eq("id", user!.id);
+        const { error } = await sb.from("profiles").update({ username: username.trim() || null } as never).eq("id", user!.id);
         if (error) {
           console.error("Failed to set username", error);
           setError("Could not save username. Try again.");

@@ -91,6 +91,7 @@ serve(async (req) => {
 
     // 2) Ingest new thread
     if (body.type === "thread_create") {
+      logExec(exec, "info", "thread_create", { body });
       const { guild_id, parent_forum_id, thread_id, thread_name, starter_content } = body;
 
       if (!guild_id || !parent_forum_id || !thread_id) {

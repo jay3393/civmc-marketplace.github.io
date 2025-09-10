@@ -19,15 +19,34 @@ function resolveBannerUrl(bannerUrl: string | null | undefined) {
 
 // Mock exchange rates (diamond as base currency)
 const RATES = {
-  iron_per_diamond: 16,
-  diamonds_per_iron: 1 / 16,
-  diamonds_per_ancient_debris: 4,
-  ancient_debris_per_diamond: 1 / 4,
-  diamonds_per_emerald_block: 2,
-  emerald_blocks_per_diamond: 1 / 2,
-  diamonds_per_essence: 2,
-  essence_per_diamond: 1 / 2,
+  iron_per_diamond: 8,
+  ancient_debris_per_diamond: 1 / 5,
+  xp_blocks_per_diamond: 1 / 2.5,
+  essence_per_diamond: 5 / 2,
 };
+
+const EXCHANGE_ITEMS_MAP = {
+  "iron_ingot": {
+    "name": "Iron Ingot",
+    "image": "https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/refs/heads/master/data/1.21.1/items/iron_ingot.png"
+  },
+  "diamonds": {
+    "name": "Diamond",
+    "image": "https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/refs/heads/master/data/1.21.1/items/diamond.png"
+  },
+  "ancient_debris": {
+    "name": "Ancient Debris",
+    "image": "https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/refs/heads/master/data/1.21.1/blocks/ancient_debris_top.png"
+  },
+  "emerald_block": {
+    "name": "XP Block",
+    "image": "https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/refs/heads/master/data/1.21.1/blocks/emerald_block.png"
+  },
+  "essence": {
+    "name": "Essence",
+    "image": "https://raw.githubusercontent.com/PrismarineJS/minecraft-assets/refs/heads/master/data/1.21.1/items/ender_eye.png"
+  }
+}
 
 type SortKey = "updated" | "reviews" | "items" | "name" | "price";
 
@@ -385,43 +404,44 @@ export default function MarketplacePage() {
               <div className="border-b bg-muted/50 px-4 py-2">
                 <div className="text-sm font-semibold">Exchange rates</div>
                 <div className="text-[11px] text-muted-foreground">Diamond is the base currency</div>
+                <div className="text-[11px] text-muted-foreground">Exchange rates are subject to change</div>
               </div>
               <div className="max-h-[40vh] overflow-y-auto divide-y">
                 {/* Iron ⇄ Diamond */}
                 <RateRow
-                  leftImg="https://minecraft.wiki/images/Iron_Ingot_JE3_BE2.png"
-                  leftLabel="Iron"
-                  rightImg="/images/Diamond_JE3_BE3.png"
-                  rightLabel="Diamond"
+                  leftImg={EXCHANGE_ITEMS_MAP.iron_ingot.image}
+                  leftLabel={EXCHANGE_ITEMS_MAP.iron_ingot.name}
+                  rightImg={EXCHANGE_ITEMS_MAP.diamonds.image}
+                  rightLabel={EXCHANGE_ITEMS_MAP.diamonds.name}
                   leftPerRight={RATES.iron_per_diamond}
-                  rightPerLeft={RATES.diamonds_per_iron}
+                  rightPerLeft={1 / RATES.iron_per_diamond}
                 />
                 {/* Ancient Debris ⇄ Diamond */}
                 <RateRow
-                  leftImg="https://minecraft.wiki/images/Ancient_Debris_JE2_BE2.png"
-                  leftLabel="Ancient Debris"
-                  rightImg="/images/Diamond_JE3_BE3.png"
-                  rightLabel="Diamond"
+                  leftImg={EXCHANGE_ITEMS_MAP.ancient_debris.image}
+                  leftLabel={EXCHANGE_ITEMS_MAP.ancient_debris.name}
+                  rightImg={EXCHANGE_ITEMS_MAP.diamonds.image}
+                  rightLabel={EXCHANGE_ITEMS_MAP.diamonds.name}
                   leftPerRight={RATES.ancient_debris_per_diamond}
-                  rightPerLeft={RATES.diamonds_per_ancient_debris}
+                  rightPerLeft={1 / RATES.ancient_debris_per_diamond}
                 />
                 {/* Emerald Block ⇄ Diamond */}
                 <RateRow
-                  leftImg="https://minecraft.wiki/images/Emerald_Block_JE3_BE3.png"
-                  leftLabel="Emerald Block"
-                  rightImg="/images/Diamond_JE3_BE3.png"
-                  rightLabel="Diamond"
-                  leftPerRight={RATES.emerald_blocks_per_diamond}
-                  rightPerLeft={RATES.diamonds_per_emerald_block}
+                  leftImg={EXCHANGE_ITEMS_MAP.emerald_block.image}
+                  leftLabel={EXCHANGE_ITEMS_MAP.emerald_block.name}
+                  rightImg={EXCHANGE_ITEMS_MAP.diamonds.image}
+                  rightLabel={EXCHANGE_ITEMS_MAP.diamonds.name}
+                  leftPerRight={RATES.xp_blocks_per_diamond}
+                  rightPerLeft={1 / RATES.xp_blocks_per_diamond}
                 />
                 {/* Essence (Eye of Ender) ⇄ Diamond */}
                 <RateRow
-                  leftImg="/images/Eye_of_Ender_JE2_BE2.png"
-                  leftLabel="Essence"
-                  rightImg="/images/Diamond_JE3_BE3.png"
-                  rightLabel="Diamond"
+                  leftImg={EXCHANGE_ITEMS_MAP.essence.image}
+                  leftLabel={EXCHANGE_ITEMS_MAP.essence.name}
+                  rightImg={EXCHANGE_ITEMS_MAP.diamonds.image}
+                  rightLabel={EXCHANGE_ITEMS_MAP.diamonds.name}
                   leftPerRight={RATES.essence_per_diamond}
-                  rightPerLeft={RATES.diamonds_per_essence}
+                  rightPerLeft={1 / RATES.essence_per_diamond}
                 />
               </div>
             </div>
@@ -453,14 +473,16 @@ function RateRow({
 }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3">
-      <Image src={leftImg} alt={leftLabel} width={24} height={24} className="h-6 w-6 object-contain" />
+      {/* separate into three rows to show the images on the same row and two other rows for the exchange rates */}
+      <div className="flex items-center gap-3">
+        <Image src={leftImg} alt={leftLabel} width={24} height={24} className="h-6 w-6 object-contain" />
+      </div>
       <div className="text-xs text-foreground min-w-0">
-        1 {rightLabel} = <span className="font-medium">{formatRate(leftPerRight)}</span> {leftLabel}
+        <div className="font-medium">{formatRate(leftPerRight)} {leftLabel} = <span className="font-medium"> 1</span> {rightLabel}</div>
         <div className="text-[11px] text-muted-foreground">1 {leftLabel} = {formatRate(rightPerLeft)} {rightLabel}</div>
       </div>
       <div className="ml-auto flex items-center gap-2 text-muted-foreground text-xs">
         <Image src={rightImg} alt={rightLabel} width={20} height={20} className="h-5 w-5 object-contain" />
-        <span className="hidden sm:inline">{rightLabel}</span>
       </div>
     </div>
   );

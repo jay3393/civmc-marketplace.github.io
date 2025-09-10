@@ -8,6 +8,7 @@ import UsernamePrompt from "@/components/auth/username-prompt";
 export default function HeaderShell() {
   const pathname = usePathname();
   const isWaitlist = pathname?.startsWith("/waitlist") ?? false;
+  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || "https://discord.gg/8s7NYH5DFb";
 
   if (isWaitlist) return null;
 
@@ -37,7 +38,7 @@ export default function HeaderShell() {
       <div className="bg-black border-b border-black">
         <div className="container mx-auto px-4 py-2 text-white text-sm text-center">
           <span className="font-bold">Alpha:</span> This site is an MVP. Expect bugs and unpolished features while we iterate.
-          <Link href="https://discord.gg/8s7NYH5DFb" className="text-blue-500"> Join our Discord</Link>
+          <Link href={discordInvite} className="text-blue-500"> Join our Discord</Link>
         </div>
       </div>
       <div className="py-3">

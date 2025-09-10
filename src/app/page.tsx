@@ -15,7 +15,7 @@ export default function Home() {
           </p>
         </Link>
         {/* Disabled: WIP */}
-        {false ? (
+        {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
         <Link href="/routes" className="rounded-lg border p-6 hover:bg-muted/50 transition">
           <div className="text-xl font-semibold mb-2">Routes</div>
           <p className="text-sm text-muted-foreground">
@@ -29,7 +29,7 @@ export default function Home() {
           </p>
         </Link>
         {/* Disabled: WIP */}
-        {false ? (
+        {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
         <Link href="/events" className="rounded-lg border p-6 hover:bg-muted/50 transition">
           <div className="text-xl font-semibold mb-2">Events</div>
           <p className="text-sm text-muted-foreground">

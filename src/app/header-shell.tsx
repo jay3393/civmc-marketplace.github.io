@@ -19,12 +19,12 @@ export default function HeaderShell() {
           <div className="flex items-center gap-4 text-sm">
             <Link href="/marketplace">Marketplace</Link>
             {/* Disabled: WIP */}
-            {false ? (
+            {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
             <Link href="/routes">Routes</Link>
             ) : null}
             <Link href="/contracts">Contracts</Link>
             {/* Disabled: WIP */}
-            {false ? (
+            {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
             <Link href="/events">Events</Link>
             ) : null}
             <Link href="/settlements">Settlements</Link>

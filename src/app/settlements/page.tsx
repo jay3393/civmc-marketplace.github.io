@@ -371,7 +371,7 @@ export default function SettlementsPage() {
   );
 }
 
-function RegisterModal({ open, onOpenChange, mode, setMode }: { open: boolean; onOpenChange: (v: boolean) => void; mode: "chooser" | "nation" | "settlement"; setMode: (m: "chooser" | "nation" | "settlement") => void }) {
+function RegisterModal({ open, onOpenChange, mode, setMode }: { open: boolean; onOpenChange: (v: boolean) => void; mode: "chooser" | "nation" | "settlement" | "login"; setMode: (m: "chooser" | "nation" | "settlement" | "login") => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">

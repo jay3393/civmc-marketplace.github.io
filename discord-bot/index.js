@@ -110,7 +110,7 @@ import {
       if (interaction.commandName === "invite") {
         return interaction.reply({
           content: `🔗 **Invite me to your server:**\n${buildInviteURL()}\n\n` +
-                   `> Requires permissions: View Channels, Read Message History, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Embed Links.`,
+                   `> Requires permissions: View Channels, Read Message History, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Embed Links, Attach Files.`,
           ephemeral: true,
         });
       }

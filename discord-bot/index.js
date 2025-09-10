@@ -47,8 +47,7 @@ import {
       PermissionsBitField.Flags.CreatePublicThreads,
       PermissionsBitField.Flags.ManageThreads,
       PermissionsBitField.Flags.EmbedLinks,
-      // Optional (uncomment if you want):
-      // PermissionsBitField.Flags.AttachFiles,
+      PermissionsBitField.Flags.AttachFiles,
       // PermissionsBitField.Flags.AddReactions
     );
     const permissions = perms.bitfield.toString(); // bigint -> string

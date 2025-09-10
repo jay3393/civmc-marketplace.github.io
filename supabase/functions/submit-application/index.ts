@@ -3,11 +3,20 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "https://civhub.net",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const ALLOWED_ORIGINS = new Set<string>([
+  "https://civhub.net",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+
+function corsHeaders(origin: string | null) {
+  const allowOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://civhub.net";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  } as Record<string, string>;
+}
 
 const SUPABASE_URL   = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -17,6 +26,9 @@ const APPLICATIONS_CHANNEL_ID = Deno.env.get("APPLICATIONS_CHANNEL_ID")!;
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const CORS = corsHeaders(origin);
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return new Response("Method not allowed", { status:405, headers: CORS });
 
@@ -30,42 +42,33 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid JSON" }), { status:400, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
-    // Log a safe snapshot of the incoming payload (no secrets)
     console.log("submit-application: received", {
       kind: body?.kind,
       hasData: !!body?.data,
       requestorKeys: body?.requestor ? Object.keys(body.requestor) : [],
     });
 
-    // Accept both legacy and new payload shapes
     const kind: string | undefined = body?.kind;
     const data = body?.data ?? {};
 
-    // Derive name/description
     const derivedName = data?.nation_name ?? data?.settlement_name;
     const derivedDescription = data?.description ?? null;
 
-    // Derive requester identifiers
     const requester_profile_id = body?.requester_profile_id || body?.requestor?.profileId || null;
-    const requester_discord_id = body?.requester_discord_id || body?.requestor?.discordId || null; // may be null if not available
 
     if (!kind || !derivedName) {
       console.error("submit-application: validation failed", { kind, derivedName });
       return new Response(JSON.stringify({ error: "Missing kind/name" }), { status:400, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
-    // Insert an application record (legacy-compatible columns). If your table supports a JSON payload column,
-    // you can also store `data` there by adding it to the insert.
     const insertPayload: Record<string, any> = {
       kind,
       name: derivedName,
       description: derivedDescription,
-      data: data, // this is jsonb type column
+      data: data,
       requester_profile_id,
-      requester_discord_id,
     };
 
-    // Log what we are about to insert (sanitized)
     console.log("submit-application: inserting application", { kind, data, requester_profile_id: !!requester_profile_id });
 
     const { data: app, error } = await sb
@@ -79,26 +82,50 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Database insert failed" }), { status:500, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
-    // Process data to be displayed in the Discord embed fields for each key in data (readable format)
-    // exclude nation/settlement name and description
-    const fields = Object.entries(data).filter(([key]) => key !== "nation_name" && key !== "settlement_name" && key !== "description").map(([key, value]) => ({
-      name: key.replace(/_/g, " ").charAt(0).toUpperCase() + key.replace(/_/g, " ").slice(1),
-      value: value ? String(value).slice(0, 1024) : "N/A",
-      inline: key === "x" || key === "z"
-    }));
+    // Build a public URL for the flag if provided as a storage path
+    let imageUrl: string | null = null;
+    const rawFlag = (data?.flag_url ? String(data.flag_url) : "").trim();
+    if (rawFlag) {
+      if (rawFlag.startsWith("http://") || rawFlag.startsWith("https://")) {
+        imageUrl = rawFlag;
+      } else {
+        // Encode path to handle spaces/special chars
+        const encodedPath = encodeURI(rawFlag);
+        imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${encodedPath}`;
+      }
+      // Validate URL; if invalid, drop image
+      try {
+        // eslint-disable-next-line no-new
+        new URL(imageUrl);
+      } catch {
+        console.warn("submit-application: image URL invalid, dropping", { imageUrl });
+        imageUrl = null;
+      }
+    }
+
+    const fields = Object.entries(data)
+      .filter(([key]) => key !== "nation_name" && key !== "settlement_name" && key !== "description" && key !== "flag_url")
+      .map(([key, value]) => ({
+        name: key.replace(/_/g, " ").charAt(0).toUpperCase() + key.replace(/_/g, " ").slice(1),
+        value: value ? String(value).slice(0, 1024) : "N/A",
+        inline: key === "x" || key === "z"
+      }));
     
     console.log("submit-application: fields", fields);
 
-    const embed = {
+    const embed: any = {
       title: `New ${kind} application: ${derivedName}`,
       description: derivedDescription ?? "(no description)",
       fields: [
-        requester_discord_id ? { name: "Requester", value: `<@${requester_discord_id}>`, inline: true } : undefined,
         ...fields,
-        // { name: "Status", value: "Pending — need 2 approvals", inline: false },
       ].filter(Boolean),
       timestamp: new Date().toISOString(),
     };
+
+    if (imageUrl) {
+      embed.image = { url: imageUrl };
+      console.log("submit-application: imageUrl", imageUrl);
+    }
 
     const components = [
       {
@@ -134,7 +161,6 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("submit-application: failed to update application with discord IDs", { error: updateError.message, application_id: app.id });
-      // Still return success for application creation; logging is sufficient
     }
 
     return new Response(JSON.stringify({ ok:true, id: app.id }), { headers:{ "Content-Type":"application/json", ...CORS }});

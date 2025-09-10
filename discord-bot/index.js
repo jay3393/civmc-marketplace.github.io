@@ -45,12 +45,14 @@ import {
       PermissionsBitField.Flags.SendMessages,
       PermissionsBitField.Flags.SendMessagesInThreads,
       PermissionsBitField.Flags.CreatePublicThreads,
-      PermissionsBitField.Flags.ManageThreads,
+      // PermissionsBitField.Flags.ManageThreads,
       PermissionsBitField.Flags.EmbedLinks,
       PermissionsBitField.Flags.AttachFiles,
       // PermissionsBitField.Flags.AddReactions
     );
     const permissions = perms.bitfield.toString(); // bigint -> string
+    console.log(permissions);
+    console.log("Right permissions: 309237763072");
     // Scopes: bot + application commands (for slash commands)
     return `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=${permissions}&scope=bot%20applications.commands`;
   }

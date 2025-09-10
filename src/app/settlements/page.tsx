@@ -187,7 +187,7 @@ export default function SettlementsPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-auto">
+    <div className="relative min-h-screen w-full">
 
       <div className="relative grid gap-6 p-6 sm:p-8">
         {/* Hero */}

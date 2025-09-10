@@ -14,24 +14,28 @@ export default function Home() {
             Browse and bid on contract requests between nations.
           </p>
         </Link>
+        {/* Disabled: WIP */}
+        {false ? (
         <Link href="/routes" className="rounded-lg border p-6 hover:bg-muted/50 transition">
           <div className="text-xl font-semibold mb-2">Routes</div>
           <p className="text-sm text-muted-foreground">
             Plan rail itineraries across nations and hubs.
           </p>
-        </Link>
+        </Link>) : null}
         <Link href="/contracts" className="rounded-lg border p-6 hover:bg-muted/50 transition">
           <div className="text-xl font-semibold mb-2">Contracts</div>
           <p className="text-sm text-muted-foreground">
             Create large-scale contracts; bid on work and resource requests.
           </p>
         </Link>
+        {/* Disabled: WIP */}
+        {false ? (
         <Link href="/events" className="rounded-lg border p-6 hover:bg-muted/50 transition">
           <div className="text-xl font-semibold mb-2">Events</div>
           <p className="text-sm text-muted-foreground">
             Organize and discover server events with date, time, and location.
           </p>
-        </Link>
+        </Link>) : null}
         <Link href="/settlements" className="rounded-lg border p-6 hover:bg-muted/50 transition">
           <div className="text-xl font-semibold mb-2">Settlements</div>
           <p className="text-sm text-muted-foreground">

@@ -18,9 +18,15 @@ export default function HeaderShell() {
           <Link href="/" className="font-semibold">CivHub</Link>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/marketplace">Marketplace</Link>
+            {/* Disabled: WIP */}
+            {false ? (
             <Link href="/routes">Routes</Link>
+            ) : null}
             <Link href="/contracts">Contracts</Link>
+            {/* Disabled: WIP */}
+            {false ? (
             <Link href="/events">Events</Link>
+            ) : null}
             <Link href="/settlements">Settlements</Link>
           </div>
           <div className="ml-auto">

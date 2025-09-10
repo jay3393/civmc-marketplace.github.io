@@ -4,7 +4,6 @@ import HeaderShell from "./header-shell";
 import { Providers } from "./providers";
 import { Geist, Geist_Mono } from "next/font/google";
 import MainShell from "./main-shell";
-import LockGuard from "./lock-guard";
 import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@vercel/analytics/next"
 
@@ -22,10 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className="h-full w-full overflow-x-hidden">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full w-full overflow-x-hidden`}> 
         <Providers>
-          <LockGuard />
           <HeaderShell />
           <MainShell>{children}</MainShell>
         </Providers>

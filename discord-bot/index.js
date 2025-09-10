@@ -155,7 +155,7 @@ import {
         });
   
         if (r.ok) {
-          await interaction.reply({ content: `✅ Ingest set to <#${forum.id}>`, ephemeral: true });
+          await interaction.reply({ content: `✅ Ingesting contracts from <#${forum.id}>\nView your ingested contracts at https://civhub.net/contracts`, ephemeral: true });
         } else {
           const t = await r.text();
           await interaction.reply({ content: `❌ Failed to save: ${t}`, ephemeral: true });

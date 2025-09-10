@@ -123,7 +123,19 @@ import {
         if (forum?.type !== ChannelType.GuildForum) {
           return interaction.reply({ content: "Please pick a **Forum** channel.", ephemeral: true });
         }
-  
+
+        // Ensure the bot can read the selected forum channel
+        const me = interaction.guild?.members.me;
+        const perms = forum.permissionsFor(me ?? interaction.client.user);
+        const hasView = perms?.has(PermissionsBitField.Flags.ViewChannel);
+        const hasRead = perms?.has(PermissionsBitField.Flags.ReadMessageHistory);
+        if (!hasView || !hasRead) {
+          return interaction.reply({
+            content: `❌ I don't have permission to read <#${forum.id}>. Please grant me "View Channels" and "Read Message History" for that forum channel and try again.`,
+            ephemeral: true,
+          });
+        }
+ 
         const payload = {
           type: "setup_forum",
           guild_id: interaction.guildId,

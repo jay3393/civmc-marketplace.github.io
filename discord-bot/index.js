@@ -79,6 +79,10 @@ import {
           name: "invite",
           description: "Get the bot invite link (with the correct permissions)",
         },
+        {
+          name: "contracts-unsetup",
+          description: "Stop ingesting contracts from this server",
+        },
       ],
     });
     console.log(`[commands] Registered in guild ${guildId}`);

@@ -68,6 +68,24 @@ serve(async (req) => {
 
     logExec(exec, "info", "parsed body", { type: body?.type });
 
+    // 0) Remove forum setup
+    if (body.type === "remove_forum") {
+      const { guild_id } = body;
+      if (!guild_id) {
+        logExec(exec, "error", "missing fields (remove_forum)", { guild_id_present: !!guild_id });
+        return j({ error: "Missing guild_id/forum_channel_id" }, 400);
+      }
+
+      const { error } = await sb.from("source_forums").delete().eq("guild_id", guild_id);
+      if (error) {
+        logExec(exec, "error", "delete source_forums failed", { code: (error as any)?.code, details: (error as any)?.details, hint: (error as any)?.hint, message: error.message });
+        return j({ error: "DB error: delete source_forums", code: (error as any)?.code, details: (error as any)?.details, hint: (error as any)?.hint, message: error.message }, 500);
+      }
+
+      logExec(exec, "info", "remove_forum ok", { guild_id });
+      return j({ ok: true });
+    }
+
     // 1) Save forum setup
     if (body.type === "setup_forum") {
       const { guild_id, guild_name, forum_channel_id } = body;

@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import nacl from "https://esm.sh/tweetnacl@1.0.3";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PermissionFlagsBits } from "https://deno.land/x/discord_api_types/v10.ts";
 
 const DISCORD_PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;  // from Dev Portal
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
@@ -12,8 +13,22 @@ const APP_ID = Deno.env.get("DISCORD_APP_ID")!;
 const INGEST_URL = Deno.env.get("INGEST_URL")!;
 const SUPABASE_BEARER = Deno.env.get("_SUPABASE_BEARER")!;
 const SUPABASE_API_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const DISCORD_BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN")!;
 
 const INVITE_PERMISSIONS = "309237763072";
+
+type Overwrite = { id: string; type: 0 | 1; allow: string; deny: string };
+type Role = { id: string; permissions: string };
+type Channel = { id: string; guild_id: string; permission_overwrites?: Overwrite[] };
+
+function b(s?: string): bigint { return s ? BigInt(s) : 0n; }
+function has(bits: bigint, flag: bigint) { return (bits & flag) !== 0n; }
+
+function applyOverwrite(base: bigint, allow: bigint, deny: bigint) {
+  base &= ~deny;  // remove denied bits
+  base |= allow;  // add allowed bits
+  return base;
+}
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
@@ -22,6 +37,12 @@ const CORS = {
   "Access-Control-Allow-Headers": "content-type, x-signature-ed25519, x-signature-timestamp",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+function logExec(id: string, level: "info" | "error", msg: string, extra?: Record<string, unknown>) {
+  const base = { t: new Date().toISOString(), exec: id, msg };
+  // deno console.* can print objects directly
+  (level === "error" ? console.error : console.log)({ ...base, ...extra });
+}
 
 // Verify request signature (Discord)
 async function verifyDiscordRequest(req: Request, bodyText: string): Promise<boolean> {
@@ -41,6 +62,57 @@ function hexToUint8Array(hex: string) {
 }
 function inviteURL(appId = APP_ID) {
   return `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=${INVITE_PERMISSIONS}&scope=bot%20applications.commands`;
+}
+async function api<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`https://discord.com/api/v10${path}`, {
+    headers: { "Authorization": `Bot ${token}` }
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Discord API ${path} -> ${res.status} ${text}`);
+  }
+  return await res.json();
+}
+/**
+ * Compute effective channel permissions for the bot.
+ * Follows Discord's algorithm: everyone role -> sum roles -> overwrites (@everyone -> roles -> member).
+ */
+function computeEffectivePerms(
+  guildId: string,
+  botRoleIds: string[],
+  roles: Role[],
+  overwrites: Overwrite[] | undefined
+) {
+  const roleMap = new Map<string, bigint>();
+  for (const r of roles) roleMap.set(r.id, b(r.permissions));
+
+  let perms = roleMap.get(guildId) ?? 0n;         // @everyone role base
+  for (const id of botRoleIds) perms |= roleMap.get(id) ?? 0n;
+
+  const ows = overwrites ?? [];
+
+  // 1) @everyone overwrite (id == guildId)
+  const everyone = ows.find(o => o.id === guildId);
+  if (everyone) perms = applyOverwrite(perms, b(everyone.allow), b(everyone.deny));
+
+  // 2) role overwrites for any of the bot's roles
+  for (const o of ows) {
+    if (o.type === 0 && botRoleIds.includes(o.id)) {
+      perms = applyOverwrite(perms, b(o.allow), b(o.deny));
+    }
+  }
+
+  // 3) member overwrite for the bot (optional; rarely present on text/forum channels)
+  // You can enable this if you fetched the bot's user id as `botUserId`:
+  // const memberOw = ows.find(o => o.type === 1 && o.id === botUserId);
+  // if (memberOw) perms = applyOverwrite(perms, b(memberOw.allow), b(memberOw.deny));
+
+  return perms;
+}
+
+function isGuildAdmin(memberPerms: string): boolean {
+  const perms = BigInt(memberPerms);
+  return (perms & PermissionFlagsBits.Administrator) !== 0n;
 }
 
 
@@ -73,7 +145,44 @@ serve(async (req) => {
       );
     }
 
+    // Remove the forum from the server
+    if (name === "contracts-unsetup") {
+      if (!isGuildAdmin(body.member?.permissions ?? "0")) return respondEphemeral("❌ Command must be used by a server administrator.", []);
+
+      if (!guildId) return respondEphemeral("❌ This command must be used in a server.", []);
+
+      const payload = {
+        type: "remove_forum",
+        guild_id: guildId,
+      };
+
+      try {
+        const resp = await fetch(INGEST_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_BEARER}`,
+            apikey: SUPABASE_API_KEY,
+          },
+          body: JSON.stringify(payload),
+          // keepalive helps in edge contexts, optional:
+          // keepalive: true,
+        });
+    
+        if (resp.ok) {
+          return respondEphemeral(`✅ Stopped ingesting contracts from this server.`, []);
+        } else {
+          const t = await resp.text();
+          return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
+        }
+      } catch (e) {
+        console.error("[contracts-setup] ingest error:", e);
+        return respondEphemeral("❌ Failed to reach ingest function.", []);
+      }
+    }
+
     if (name === "contracts-setup") {
+      if (!isGuildAdmin(body.member?.permissions ?? "0")) return respondEphemeral("❌ Command must be used by a server administrator.", []);
       if (!guildId) return respondEphemeral("❌ This command must be used in a server.", []);
       // Expect an option named "forum" with the channel id
       const options: any[] = body.data?.options ?? [];
@@ -91,6 +200,41 @@ serve(async (req) => {
         // You can hard‑fail instead if you prefer strictness.
         // return respondEphemeral("❌ Please pick a **Forum** channel.");
         console.log("[contracts-setup] Channel type not resolved; proceeding with forumId only");
+      }
+
+      try {
+        // 0) Get Application Id (the bot's user id)
+        const botId = body.application_id;
+
+        // 1) Bot member (roles)
+        const me = await api<{ roles: string[]; user: { id: string } }>(`/guilds/${guildId}/members/${botId}`, DISCORD_BOT_TOKEN);
+
+        // 2) Guild roles (permissions bitfields)
+        const roles = await api<Role[]>(`/guilds/${guildId}/roles`, DISCORD_BOT_TOKEN);
+
+        // 3) Channel (get target channel id)
+        const forumChannelId = body.data.options?.find(o => o.name === "forum")?.value;
+
+        // 4) Channel (permission_overwrites)
+        const ch = await api<Channel>(`/channels/${forumChannelId}`, DISCORD_BOT_TOKEN);
+
+        // 5) Check permissions
+        const perms = computeEffectivePerms(
+          ch.guild_id ?? guildId,
+          me.roles,
+          roles,
+          ch.permission_overwrites
+        );
+
+        const hasView = has(perms, PermissionFlagsBits.ViewChannel);
+        const hasRead = has(perms, PermissionFlagsBits.ReadMessageHistory);
+
+        if (!hasView || !hasRead) {
+          return respondEphemeral(`❌ I don't have permission to read <#${forumId}>. Please grant me "View Channels" and "Read Message History" for that forum channel and try again.`, []);
+        }
+      } catch (e) {
+        logExec("contracts-setup", "error", "error checking permissions", { error: e });
+        return respondEphemeral(`❌ I don't have permission to read <#${forumId}>. Please grant me "View Channels" and "Read Message History" for that forum channel and try again.`, []);
       }
 
       const payload = {
@@ -115,7 +259,7 @@ serve(async (req) => {
         });
     
         if (resp.ok) {
-          return respondEphemeral(`✅ Ingest set to <#${forumId}>`, []);
+          return respondEphemeral(`✅ Ingesting contracts from <#${forumId}>\nView your ingested contracts at https://civhub.net/contracts`, []);
         } else {
           const t = await resp.text();
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);

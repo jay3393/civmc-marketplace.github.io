@@ -19,16 +19,28 @@ export default function HeaderShell() {
           <Link href="/" className="font-semibold">CivHub</Link>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/marketplace">Marketplace</Link>
-            {/* Disabled: WIP */}
-            {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
-            <Link href="/routes">Routes</Link>
-            ) : null}
             <Link href="/contracts">Contracts</Link>
-            {/* Disabled: WIP */}
-            {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
-            <Link href="/events">Events</Link>
-            ) : null}
             <Link href="/settlements">Settlements</Link>
+
+            {/* Disabled: WIP, make muted and unclickable and subscript text saying coming soon */}
+            {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
+              <Link href="/routes">Routes</Link>
+            ) : (
+              <div className="relative">
+                <span className="text-muted-foreground">Routes</span>
+                <span className="absolute text-muted-foreground text-[10px] whitespace-nowrap left-1/2 -translate-x-1/2 top-full">Coming!</span>
+              </div>
+            )}
+
+            {/* Disabled: WIP, make muted and unclickable and subscript text saying coming soon */}
+            {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (
+              <Link href="/events">Events</Link>
+            ) : (
+              <div className="relative">
+                <span className="text-muted-foreground">Events</span>
+                <span className="absolute text-muted-foreground text-[10px] whitespace-nowrap left-1/2 -translate-x-1/2 top-full">Coming!</span>
+              </div>
+            )}
           </div>
           <div className="ml-auto">
             <AuthButton />

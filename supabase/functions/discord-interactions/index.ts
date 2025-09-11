@@ -165,8 +165,7 @@ serve(async (req) => {
             apikey: SUPABASE_API_KEY,
           },
           body: JSON.stringify(payload),
-          // keepalive helps in edge contexts, optional:
-          // keepalive: true,
+          keepalive: false,
         });
     
         if (resp.ok) {
@@ -254,8 +253,7 @@ serve(async (req) => {
             apikey: SUPABASE_API_KEY,
           },
           body: JSON.stringify(payload),
-          // keepalive helps in edge contexts, optional:
-          // keepalive: true,
+          keepalive: false,
         });
     
         if (resp.ok) {

@@ -8,8 +8,34 @@ import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
-  title: "CivHub",
-  description: "Marketplace and all things CivHub",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://civhub.net"),
+  title: {
+    default: "CivHub",
+    template: "%s | CivHub",
+  },
+  description: "Start your Civ journey today. Join nations, explore trade, and grow with the global CivMC community.",
+  openGraph: {
+    title: "Civilization Awaits",
+    description: "Start your Civ journey today. Join nations, explore trade, and grow with the global CivMC community.",
+    url: "/",
+    siteName: "CivHub",
+    images: [
+      {
+        url: "/images/banner.png",
+        width: 1200,
+        height: 630,
+        alt: "CivHub",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CivHub",
+    description: "Marketplace and all things CivHub",
+    images: ["/images/banner.png"],
+  },
 };
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });

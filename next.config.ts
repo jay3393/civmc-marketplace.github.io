@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "minecraft.wiki" },
       { protocol: "https", hostname: "raw.githubusercontent.com" },
+      { protocol: "https", hostname: "minotar.net" },
     ],
   },
 };

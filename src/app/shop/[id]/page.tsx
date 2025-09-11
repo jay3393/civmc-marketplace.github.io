@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Image from "next/image";
 
 function resolveBannerUrl(bannerUrl: string | null | undefined) {
   if (!bannerUrl) return "/images/default_settlement.jpg";
@@ -235,6 +236,17 @@ export default function ShopDetailPage() {
     }
   }
 
+  async function deleteListing(id: string | null) {
+    if (!isOwner) return;
+    const sb = getSupabaseBrowser();
+    const { error } = await sb.from("shop_items").delete().eq("id", id);
+    if (!error) {
+      setItems((prev) => prev.filter((it) => it.id !== id));
+    }
+    // close the edit modal
+    setEditOpen(false);
+  }
+
   function resolveCatalogByName(name: string) {
     const found = itemsCatalog.find((i) => i.name.toLowerCase() === name.toLowerCase());
     return found ?? null;
@@ -272,6 +284,7 @@ export default function ShopDetailPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={bannerSrc} alt={shop.shop_name} className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute bottom-2 left-2 inline-flex items-center gap-2 rounded-full border bg-white/80 backdrop-blur px-2 py-1 shadow-sm">
+              <Image src={`https://minotar.net/helm/${encodeURIComponent(ownerName ?? "user")}/100.png`} alt="Owner avatar" className="h-4 w-4 rounded-sm" width={16} height={16} />
               <span className="text-xs font-medium text-slate-900 truncate max-w-[180px]">{ownerName ?? "Owner"}</span>
               <span className="text-[10px] text-slate-600">·</span>
               <span className="text-xs text-slate-700 truncate max-w-[180px]">{shop.world} @ {shop.x},{shop.y ?? "~"},{shop.z}</span>
@@ -361,24 +374,24 @@ export default function ShopDetailPage() {
                   <div className="p-4 grid gap-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-sm font-semibold truncate" title={item.outputName}>{item.outputName}</div>
-                      <Button
-                        variant="outline"
-                        className="h-8"
-                        onClick={() => {
-                          setEditingId(item.id);
-                          setEditInputName(item.inputName);
-                          setEditOutputName(item.outputName);
-                          setEditInputQty(item.inputQty);
-                          setEditOutputQty(item.outputQty);
-                          setEditStock(String(item.stock ?? ""));
-                          setEditNotes(item.notes ?? "");
-                          setEditListed(item.is_listed !== false);
-                          setEditOpen(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </div>
+                        <Button
+                          variant="outline"
+                          className="h-8"
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditInputName(item.inputName);
+                            setEditOutputName(item.outputName);
+                            setEditInputQty(item.inputQty);
+                            setEditOutputQty(item.outputQty);
+                            setEditStock(String(item.stock ?? ""));
+                            setEditNotes(item.notes ?? "");
+                            setEditListed(item.is_listed !== false);
+                            setEditOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                       <div className="grid gap-1 text-center">
                         <div className="text-[11px] text-muted-foreground">You give</div>
@@ -506,9 +519,24 @@ export default function ShopDetailPage() {
                 <label className="text-xs text-muted-foreground">Description</label>
                 <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
               </div>
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+              <Button
+                  variant="destructive"
+                  className="h-8"
+                  onClick={() => {
+                    if (!confirm("Delete this listing? This cannot be undone.")) return;
+                    deleteListing(editingId);
+                  }}
+                >
+                  Delete
+                </Button>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+
                 <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
                 <Button onClick={() => { if (!editingId) return; updateListing(editingId, { inputName: editInputName, inputQty: editInputQty, outputName: editOutputName, outputQty: editOutputQty, stock: editStock.trim() ? Number(editStock) : 0, is_listed: editListed, notes: editNotes || null }); setEditOpen(false); }}>Save changes</Button>
+                </div>
               </div>
             </div>
           </DialogContent>

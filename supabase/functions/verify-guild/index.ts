@@ -5,7 +5,10 @@ import jwt from "npm:jsonwebtoken@9.0.2";
 const DISCORD_BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN")!;
 const DISCORD_GUILD_ID = Deno.env.get("DISCORD_GUILD_ID")!;
 const IN_GUILD_JWT_SECRET = Deno.env.get("IN_GUILD_JWT_SECRET") || crypto.randomUUID();
-const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "https://civhub.net,http://localhost:3000,http://127.0.0.1:3000").split(",").map((s) => s.trim());
+const PROD_ORIGINS = ["https://civhub.net"];
+const DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const ENV = Deno.env.get("NODE_ENV") === "development" ? "development" : "production";
+const ALLOWED_ORIGINS = ENV === "development" ? [...PROD_ORIGINS, ...DEV_ORIGINS] : PROD_ORIGINS;
 
 function corsHeaders(origin: string | null) {
   const allowOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : "*";

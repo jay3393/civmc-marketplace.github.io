@@ -3,11 +3,12 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ALLOWED_ORIGINS = new Set<string>([
-  "https://civhub.net",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-]);
+const PROD_ORIGINS = ["https://civhub.net"];
+const DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const ENV = Deno.env.get("NODE_ENV") === "development" ? "development" : "production";
+const ALLOWED_ORIGINS = new Set<string>(
+  ENV === "development" ? [...PROD_ORIGINS, ...DEV_ORIGINS] : PROD_ORIGINS,
+);
 
 function corsHeaders(origin: string | null) {
   const allowOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://civhub.net";

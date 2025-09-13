@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std/http/server.ts";
 import nacl from "https://esm.sh/tweetnacl@1.0.3";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PermissionFlagsBits } from "https://deno.land/x/discord_api_types/v10.ts";
+import { logExec, log } from "../_shared/log.ts";
 
 const DISCORD_PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;  // from Dev Portal
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
@@ -38,11 +39,6 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function logExec(id: string, level: "info" | "error", msg: string, extra?: Record<string, unknown>) {
-  const base = { t: new Date().toISOString(), exec: id, msg };
-  // deno console.* can print objects directly
-  (level === "error" ? console.error : console.log)({ ...base, ...extra });
-}
 
 // Verify request signature (Discord)
 async function verifyDiscordRequest(req: Request, bodyText: string): Promise<boolean> {
@@ -175,7 +171,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
         }
       } catch (e) {
-        console.error("[contracts-setup] ingest error:", e);
+        logExec("contracts-setup", "error", "ingest error", { error: e?.message }, ["error"]);
         return respondEphemeral("❌ Failed to reach ingest function.", []);
       }
     }
@@ -198,7 +194,7 @@ serve(async (req) => {
         // If Discord didn’t resolve it (older SDKs), we still accept but warn.
         // You can hard‑fail instead if you prefer strictness.
         // return respondEphemeral("❌ Please pick a **Forum** channel.");
-        console.log("[contracts-setup] Channel type not resolved; proceeding with forumId only");
+        logExec("contracts-setup", "info", "channel type not resolved; proceeding with forumId only");
       }
 
       try {
@@ -232,7 +228,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ I don't have permission to read <#${forumId}>. Please grant me "View Channels" and "Read Message History" for that forum channel and try again.`, []);
         }
       } catch (e) {
-        logExec("contracts-setup", "error", "error checking permissions", { error: e });
+        logExec("contracts-setup", "error", "error checking permissions", { error: e?.message }, ["error"]);
         return respondEphemeral(`❌ I don't have permission to read <#${forumId}>. Please grant me "View Channels" and "Read Message History" for that forum channel and try again.`, []);
       }
 
@@ -263,7 +259,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
         }
       } catch (e) {
-        console.error("[contracts-setup] ingest error:", e);
+        logExec("contracts-setup", "error", "ingest error", { error: e?.message }, ["error"]);
         return respondEphemeral("❌ Failed to reach ingest function.", []);
       }
     }
@@ -326,8 +322,8 @@ serve(async (req) => {
           discord: app.data.discord ?? null,
           active: true,
         }).select().single();
-        if (nationErr) console.error("❌ DB error (nation):", nationErr);
-        console.log("✅ Nation created:", nation);
+        if (nationErr) log("error", "DB error (nation)", { error: nationErr.message }, ["error"]);
+        log("info", "nation created", { id: nation?.id }, ["id"]);
       } else {
         const { data: settlement, error: settlementErr } = await sb.from("settlements").insert({
           settlement_name: app.data.settlement_name,
@@ -341,8 +337,8 @@ serve(async (req) => {
           size: app.data.size ?? null,
           active: true,
         }).select().single();
-        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr);
-        console.log("✅ Settlement created:", settlement);
+        if (settlementErr) log("error", "DB error (settlement)", { error: settlementErr.message }, ["error"]);
+        log("info", "settlement created", { id: settlement?.id }, ["id"]);
       }
       await sb.from("applications").update({ status: "approved" }).eq("id", application_id);
       finalized = true;

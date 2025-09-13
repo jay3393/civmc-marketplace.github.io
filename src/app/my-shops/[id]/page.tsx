@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { log } from "../../../lib/log";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -146,7 +147,7 @@ export default function ManageShopPage() {
         // update shop banner_url
         const { error: updateError } = await sb.from("shops").update({ banner_url: path }).eq("id", shopId);
         if (updateError) {
-          console.error("Error updating shop banner_url:", updateError);
+          log("error", "Error updating shop banner_url", { updateError }, ["updateError"]);
         }
         if (!up.error) {
           const pub = sb.storage.from("shop-images").getPublicUrl(path);

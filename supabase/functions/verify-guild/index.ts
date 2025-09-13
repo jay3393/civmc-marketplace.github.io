@@ -1,6 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import jwt from "npm:jsonwebtoken@9.0.2";
+import { log } from "../_shared/log.ts";
 
 const DISCORD_BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN")!;
 const DISCORD_GUILD_ID = Deno.env.get("DISCORD_GUILD_ID")!;
@@ -41,7 +42,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "missing discord_user_id" }), { status: 400, headers: { "Content-Type": "application/json", ...CORS } });
     }
 
-    console.log("verify-guild: request", { user: maskUser(discordUserId), joinIfNeeded });
+    log("info", "verify-guild: request", { user: maskUser(discordUserId), joinIfNeeded }, ["user", "joinIfNeeded"]);
 
     // Check membership
     const memberResp = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordUserId}` , {
@@ -63,7 +64,7 @@ serve(async (req) => {
       inGuild = joinResp.ok;
     }
 
-    console.log("verify-guild: result", { user: maskUser(discordUserId), inGuildBefore, attemptedJoin, inGuild });
+    log("info", "verify-guild: result", { user: maskUser(discordUserId), inGuildBefore, attemptedJoin, inGuild }, ["user", "inGuildBefore", "attemptedJoin", "inGuild"]);
 
     const token = jwt.sign({ in_guild: inGuild }, IN_GUILD_JWT_SECRET, {
       algorithm: "HS256",

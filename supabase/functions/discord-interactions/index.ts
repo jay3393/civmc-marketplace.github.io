@@ -34,7 +34,7 @@ function applyOverwrite(base: bigint, allow: bigint, deny: bigint) {
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
 const CORS = {
-  "Access-Control-Allow-Origin": "https://civhub.net",
+  "Access-Control-Allow-Origin": "https://www.civhub.net",
   "Access-Control-Allow-Headers": "content-type, x-signature-ed25519, x-signature-timestamp",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };

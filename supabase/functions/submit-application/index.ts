@@ -78,7 +78,7 @@ serve(async (req) => {
       .single();
 
     if (error || !app) {
-      console.error("submit-application: DB insert failed", { error: error, insertPayload });
+      console.error("submit-application: DB insert failed", { error: error?.message, insertPayload });
       return new Response(JSON.stringify({ error: "Database insert failed" }), { status:500, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 

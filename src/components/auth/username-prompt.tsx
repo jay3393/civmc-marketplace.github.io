@@ -36,17 +36,17 @@ export default function UsernamePrompt() {
       try {
         const sb = getSupabaseBrowser();
         const { error } = await sb.from("profiles").update({ username: username.trim() || null } as never).eq("id", user!.id);
-        if (error) {
-          console.error("Failed to set username", error);
-          setError("Could not save username. Try again.");
-          return;
-        }
+          if (error) {
+            console.error("Failed to set username", error.message);
+            setError("Could not save username. Try again.");
+            return;
+          }
         setSuccess("Saved.");
         setVisible(false);
-      } catch (e) {
-        console.error("Unexpected error saving username", e);
-        setError("Could not save username. Try again.");
-      }
+        } catch (e) {
+          console.error("Unexpected error saving username", (e as Error)?.message ?? String(e));
+          setError("Could not save username. Try again.");
+        }
     });
   }
 

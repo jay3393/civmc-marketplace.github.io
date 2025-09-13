@@ -24,10 +24,10 @@ export default function WaitlistPage() {
       const { count, error } = await sb
         .from("profiles")
         .select("*", { count: "exact", head: true });
-      if (error) {
-        console.error("Error fetching waitlist count:", error);
-        return;
-      }
+        if (error) {
+          console.error("Error fetching waitlist count:", error.message);
+          return;
+        }
       if (count !== null) {
         setWaitlistCount(count);
       } else {

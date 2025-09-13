@@ -414,6 +414,8 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [flagFile, setFlagFile] = useState<File | null>(null);
   const [flagPreview, setFlagPreview] = useState<string | null>(null);
+  const lastSubmitRef = useRef(0);
+  const RATE_LIMIT_MS = 30_000;
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.currentTarget.files?.[0] ?? null;
@@ -430,6 +432,12 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
     setError(null);
     setSuccess(null);
     setAuthAlert(false);
+    const now = Date.now();
+    if (now - lastSubmitRef.current < RATE_LIMIT_MS) {
+      setError("Please wait before submitting again.");
+      return;
+    }
+    lastSubmitRef.current = now;
     toast.info("Submitting nation for review…");
     startTransition(async () => {
       try {
@@ -450,7 +458,6 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
             return;
           }
           fullFlagUrl = flagUrl.fullPath;
-          console.log("flagUrl", fullFlagUrl);
         }
 
         const payload = {
@@ -576,6 +583,8 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [authAlert, setAuthAlert] = useState(false);
+  const lastSubmitRef = useRef(0);
+  const RATE_LIMIT_MS = 30_000;
 
   const { data: nations } = useQuery({ queryKey: ["nations"], queryFn: fetchNations });
 
@@ -595,6 +604,12 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
     setError(null);
     setSuccess(null);
     setAuthAlert(false);
+    const now = Date.now();
+    if (now - lastSubmitRef.current < RATE_LIMIT_MS) {
+      setError("Please wait before submitting again.");
+      return;
+    }
+    lastSubmitRef.current = now;
     toast.info("Submitting settlement for review…");
     startTransition(async () => {
       try {

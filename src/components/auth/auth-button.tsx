@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function useSupabaseUser() {
@@ -37,7 +37,9 @@ export default function AuthButton() {
     try {
       setLoading(true);
       const sb = getSupabaseBrowser();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.href}` : undefined;
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback`
+        : undefined;
       const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
       if (error) {
         console.error("Auth error", error);

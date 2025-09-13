@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 
 export default function WaitlistPage() {
@@ -42,7 +42,9 @@ export default function WaitlistPage() {
       setJoining(true);
       setMessage(null);
       const sb = getSupabaseBrowser();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent("/")}`
+        : undefined;
       const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
       if (error) {
         setMessage("Could not start Discord sign-in. Please try again.");

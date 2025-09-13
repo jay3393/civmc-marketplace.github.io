@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getTimestampLocalTimezone } from "@/lib/utils";
 import { useSupabaseUser } from "@/components/auth/auth-button";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import type { DbShop, DbShopReview, ShopExchange } from "@/data/shops-db";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +38,7 @@ export default function ShopDetailPage() {
 
   // Owner-only: add/edit item listings
   const [itemsCatalog, setItemsCatalog] = useState<Array<{ id: string; name: string; texture_url: string | null }>>([]);
+  const [inputItemId, setInputItemId] = useState<string | null>(null);
   const [inputItemName, setInputItemName] = useState("");
   const [outputItemId, setOutputItemId] = useState<string | null>(null);
   const [outputItemName, setOutputItemName] = useState("");
@@ -153,7 +154,7 @@ export default function ShopDetailPage() {
       const { data } = await sb.from("shop_reviews").select("id,shop_id,author_id,rating,content,created_at").eq("shop_id", shopId).order("created_at", { ascending: false });
       setReviews((data ?? []) as unknown as DbShopReview[]);
     }
-    loadReviews();
+    // loadReviews();
   }, [shopId]);
 
   if (!shopId) return <div className="text-sm text-muted-foreground">Invalid shop.</div>;
@@ -177,11 +178,11 @@ export default function ShopDetailPage() {
     const sb = getSupabaseBrowser();
     const payload = {
       shop_id: shopId,
-      input_item_id: null,
+      input_item_id: inputItemId,
       input_item_name: inputItemName.trim(),
       input_qty: Number(inputQty),
       output_item_id: outputItemId,
-      output_item_name: outputItemId ? null : outputItemName.trim(),
+      output_item_name: outputItemName.trim(),
       output_qty: Number(outputQty),
       stock_qty: newStock.trim() ? Number(newStock) : null,
       is_listed: true,
@@ -204,8 +205,13 @@ export default function ShopDetailPage() {
       ]);
       // reset and close modal
       setInputItemName("");
-      setOutputItemId(null); setOutputItemName("");
-      setInputQty(""); setOutputQty(""); setNewStock(""); setNewNotes("");
+      setInputItemId(null);
+      setOutputItemId(null);
+      setOutputItemName("");
+      setInputQty(""); 
+      setOutputQty(""); 
+      setNewStock(""); 
+      setNewNotes("");
       setAddOpen(false);
     }
   }
@@ -317,7 +323,7 @@ export default function ShopDetailPage() {
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                   <div className="grid gap-1">
                     <label className="text-xs text-muted-foreground">Input (what players give)</label>
-                    <input list="item-catalog" className="border rounded-md h-9 px-2 text-sm" placeholder="Search or type item…" value={inputItemName} onChange={(e) => { setInputItemName(e.target.value); }} />
+                    <input list="item-catalog" className="border rounded-md h-9 px-2 text-sm" placeholder="Search or type item…" value={inputItemName} onChange={(e) => { setInputItemName(e.target.value); setInputItemId(resolveCatalogByName(e.target.value)?.id ?? null); }} />
                     <div className="flex items-center gap-2">
                       <label className="text-[11px] text-muted-foreground">Qty</label>
                       <Input type="number" min={0} value={inputQty} onChange={(e) => setInputQty(e.target.value)} className="h-8 w-20" disabled={!inputNameFilled} />
@@ -328,7 +334,7 @@ export default function ShopDetailPage() {
                   <div className="text-center text-muted-foreground">⇄</div>
                   <div className="grid gap-1">
                     <label className="text-xs text-muted-foreground">Output (what players receive)</label>
-                    <input list="item-catalog" className="border rounded-md h-9 px-2 text-sm" placeholder="Search or type item…" value={outputItemName} onChange={(e) => { setOutputItemName(e.target.value); const f = resolveCatalogByName(e.target.value); setOutputItemId(f?.id ?? null); }} />
+                    <input list="item-catalog" className="border rounded-md h-9 px-2 text-sm" placeholder="Search or type item…" value={outputItemName} onChange={(e) => { setOutputItemName(e.target.value); setOutputItemId(resolveCatalogByName(e.target.value)?.id ?? null); }} />
                     <div className="flex items-center gap-2">
                       <label className="text-[11px] text-muted-foreground">Qty</label>
                       <Input type="number" value={outputQty} min={0} onChange={(e) => setOutputQty(e.target.value)} className="h-8 w-20" disabled={!outputNameFilled} />

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { Button } from "@/components/ui/button";
 import { getTimestampLocalTimezone } from "@/lib/utils";

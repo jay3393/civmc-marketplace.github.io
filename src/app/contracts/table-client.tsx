@@ -55,7 +55,7 @@ async function fetchContracts(): Promise<ContractRow[]> {
     )
     .order("created_at", { ascending: false });
   if (error) {
-    console.error("Failed to load contracts", { error });
+    console.error("Failed to load contracts", error.message);
     throw new Error("Failed to load contracts.");
   }
   return (data ?? []) as unknown as ContractRow[];

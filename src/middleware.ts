@@ -31,7 +31,6 @@ function shouldRedirectWip(pathname: string) {
 }
 
 export function middleware(req: NextRequest) {
-  console.log("[mw] hit", req.nextUrl.pathname);
   const { pathname } = req.nextUrl;
 
   // 1) WIP redirects (prod only unless ALLOW_WIP_ROUTES=true)

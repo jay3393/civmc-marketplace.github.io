@@ -142,7 +142,7 @@ serve(async (req) => {
     const resp = await fetch(`https://discord.com/api/v10/channels/${APPLICATIONS_CHANNEL_ID}/messages`, {
       method: "POST",
       headers: { "Authorization": `Bot ${DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ content: "📥 New application", embeds: [embed], components })
+      body: JSON.stringify({ content: "📥 New application <@&1415199449696702526>", embeds: [embed], components })
     });
 
     if (!resp.ok) {

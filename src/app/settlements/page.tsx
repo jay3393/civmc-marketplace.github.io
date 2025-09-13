@@ -450,7 +450,6 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
             return;
           }
           fullFlagUrl = flagUrl.fullPath;
-          console.log("flagUrl", fullFlagUrl);
         }
 
         const payload = {

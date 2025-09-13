@@ -32,13 +32,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return new Response("Method not allowed", { status:405, headers: CORS });
 
+  const authHeader = req.headers.get("authorization");
+  const jwt = authHeader?.replace(/^Bearer\s+/i, "");
+  if (!jwt) {
+    console.warn("submit-application: missing auth header");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status:401, headers:{ "Content-Type":"application/json", ...CORS }});
+  }
+  const { data: { user } = { user: null }, error: authError } = await sb.auth.getUser(jwt);
+  if (authError || !user) {
+    console.warn("submit-application: invalid auth", { error: authError?.message });
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status:401, headers:{ "Content-Type":"application/json", ...CORS }});
+  }
+
   try {
     const rawBody = await req.text();
     let body: any = {};
     try {
       body = rawBody ? JSON.parse(rawBody) : {};
     } catch (e) {
-      console.error("submit-application: invalid JSON body", { rawBody, error: String(e) });
+      console.error("submit-application: invalid JSON body", { error: String(e) });
       return new Response(JSON.stringify({ error: "Invalid JSON" }), { status:400, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
@@ -69,7 +81,7 @@ serve(async (req) => {
       requester_profile_id,
     };
 
-    console.log("submit-application: inserting application", { kind, data, requester_profile_id: !!requester_profile_id });
+    console.log("submit-application: inserting application", { kind, hasData: !!data, requester_profile_id: !!requester_profile_id });
 
     const { data: app, error } = await sb
       .from("applications")
@@ -78,7 +90,7 @@ serve(async (req) => {
       .single();
 
     if (error || !app) {
-      console.error("submit-application: DB insert failed", { error: error, insertPayload });
+      console.error("submit-application: DB insert failed", { error: error?.message, kind });
       return new Response(JSON.stringify({ error: "Database insert failed" }), { status:500, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
@@ -111,7 +123,7 @@ serve(async (req) => {
         inline: key === "x" || key === "z"
       }));
     
-    console.log("submit-application: fields", fields);
+    console.log("submit-application: field count", fields.length);
 
     const embed: any = {
       title: `New ${kind} application: ${derivedName}`,
@@ -137,7 +149,7 @@ serve(async (req) => {
       }
     ];
 
-    console.log("submit-application: posting to Discord", { APPLICATIONS_CHANNEL_ID, title: embed.title });
+    console.log("submit-application: posting to Discord", { title: embed.title });
 
     const resp = await fetch(`https://discord.com/api/v10/channels/${APPLICATIONS_CHANNEL_ID}/messages`, {
       method: "POST",
@@ -146,8 +158,8 @@ serve(async (req) => {
     });
 
     if (!resp.ok) {
-      const txt = await resp.text().catch(() => "");
-      console.error("submit-application: Discord post failed", { status: resp.status, body: txt });
+      await resp.text().catch(() => "");
+      console.error("submit-application: Discord post failed", { status: resp.status });
       return new Response(JSON.stringify({ error: "Discord post failed" }), { status: 502, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 

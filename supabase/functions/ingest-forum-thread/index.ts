@@ -13,6 +13,7 @@ const SERVICE_ROLE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SHARED_BEARER = Deno.env.get("INGEST_SHARED_BEARER") || "";
 const POST_CONTRACT_FUNCTION_PATH = Deno.env.get("POST_CONTRACT_FUNCTION_PATH") || "/functions/v1/post-contract-to-discord";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || ""; // needed for Edge→Edge call through the gateway
+const POST_CONTRACT_SHARED_SECRET = Deno.env.get("POST_CONTRACT_SHARED_SECRET") || "";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
@@ -208,8 +209,8 @@ serve(async (req) => {
         headers: {
           "Content-Type": "application/json",
           "apikey": SUPABASE_ANON_KEY, // required by Supabase gateway even with no-verify-jwt
-          // Optionally also send Authorization with anon:
-          // "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          ...(POST_CONTRACT_SHARED_SECRET ? { "x-shared-secret": POST_CONTRACT_SHARED_SECRET } : {}),
         },
         body: JSON.stringify(payload),
       });

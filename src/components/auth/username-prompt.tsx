@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { log } from "../../lib/log";
 
 export default function UsernamePrompt() {
   const user = useSupabaseUser();
@@ -37,14 +38,14 @@ export default function UsernamePrompt() {
         const sb = getSupabaseBrowser();
         const { error } = await sb.from("profiles").update({ username: username.trim() || null } as never).eq("id", user!.id);
         if (error) {
-          console.error("Failed to set username", error);
+          log("error", "Failed to set username", { error }, ["error"]);
           setError("Could not save username. Try again.");
           return;
         }
         setSuccess("Saved.");
         setVisible(false);
       } catch (e) {
-        console.error("Unexpected error saving username", e);
+        log("error", "Unexpected error saving username", { error: e }, ["error"]);
         setError("Could not save username. Try again.");
       }
     });

@@ -2,6 +2,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { log } from "../_shared/log.ts";
 
 const ALLOWED_ORIGINS = new Set<string>([
   "https://civhub.net",
@@ -38,15 +39,15 @@ serve(async (req) => {
     try {
       body = rawBody ? JSON.parse(rawBody) : {};
     } catch (e) {
-      console.error("submit-application: invalid JSON body", { rawBody, error: String(e) });
+      log("error", "submit-application: invalid JSON body", { error: String(e) }, ["error"]);
       return new Response(JSON.stringify({ error: "Invalid JSON" }), { status:400, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
-    console.log("submit-application: received", {
+    log("info", "submit-application: received", {
       kind: body?.kind,
       hasData: !!body?.data,
       requestorKeys: body?.requestor ? Object.keys(body.requestor) : [],
-    });
+    }, ["kind", "hasData", "requestorKeys"]);
 
     const kind: string | undefined = body?.kind;
     const data = body?.data ?? {};
@@ -57,7 +58,7 @@ serve(async (req) => {
     const requester_profile_id = body?.requester_profile_id || body?.requestor?.profileId || null;
 
     if (!kind || !derivedName) {
-      console.error("submit-application: validation failed", { kind, derivedName });
+      log("error", "submit-application: validation failed", { kind, derivedName }, ["kind", "derivedName"]);
       return new Response(JSON.stringify({ error: "Missing kind/name" }), { status:400, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
@@ -69,7 +70,7 @@ serve(async (req) => {
       requester_profile_id,
     };
 
-    console.log("submit-application: inserting application", { kind, data, requester_profile_id: !!requester_profile_id });
+    log("info", "submit-application: inserting application", { kind, dataKeys: Object.keys(data), requester_profile_id: !!requester_profile_id }, ["kind", "dataKeys", "requester_profile_id"]);
 
     const { data: app, error } = await sb
       .from("applications")
@@ -78,7 +79,7 @@ serve(async (req) => {
       .single();
 
     if (error || !app) {
-      console.error("submit-application: DB insert failed", { error: error, insertPayload });
+      log("error", "submit-application: DB insert failed", { error: error?.message }, ["error"]);
       return new Response(JSON.stringify({ error: "Database insert failed" }), { status:500, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
@@ -98,7 +99,7 @@ serve(async (req) => {
         // eslint-disable-next-line no-new
         new URL(imageUrl);
       } catch {
-        console.warn("submit-application: image URL invalid, dropping", { imageUrl });
+        log("warn", "submit-application: image URL invalid, dropping", { imageUrl }, ["imageUrl"]);
         imageUrl = null;
       }
     }
@@ -111,7 +112,8 @@ serve(async (req) => {
         inline: key === "x" || key === "z"
       }));
     
-    console.log("submit-application: fields", fields);
+    const fieldNames = fields.map((f) => f.name);
+    log("info", "submit-application: fields", { fieldNames }, ["fieldNames"]);
 
     const embed: any = {
       title: `New ${kind} application: ${derivedName}`,
@@ -124,7 +126,7 @@ serve(async (req) => {
 
     if (imageUrl) {
       embed.image = { url: imageUrl };
-      console.log("submit-application: imageUrl", imageUrl);
+      log("info", "submit-application: imageUrl", { imageUrl }, ["imageUrl"]);
     }
 
     const components = [
@@ -137,7 +139,7 @@ serve(async (req) => {
       }
     ];
 
-    console.log("submit-application: posting to Discord", { APPLICATIONS_CHANNEL_ID, title: embed.title });
+    log("info", "submit-application: posting to Discord", { APPLICATIONS_CHANNEL_ID, title: embed.title }, ["APPLICATIONS_CHANNEL_ID", "title"]);
 
     const resp = await fetch(`https://discord.com/api/v10/channels/${APPLICATIONS_CHANNEL_ID}/messages`, {
       method: "POST",
@@ -147,12 +149,12 @@ serve(async (req) => {
 
     if (!resp.ok) {
       const txt = await resp.text().catch(() => "");
-      console.error("submit-application: Discord post failed", { status: resp.status, body: txt });
+      log("error", "submit-application: Discord post failed", { status: resp.status, body: txt }, ["status", "body"]);
       return new Response(JSON.stringify({ error: "Discord post failed" }), { status: 502, headers:{ "Content-Type":"application/json", ...CORS }});
     }
 
     const msg = await resp.json();
-    console.log("submit-application: Discord post ok", { message_id: msg?.id });
+    log("info", "submit-application: Discord post ok", { message_id: msg?.id }, ["message_id"]);
 
     const { error: updateError } = await sb
       .from("applications")
@@ -160,12 +162,12 @@ serve(async (req) => {
       .eq("id", app.id);
 
     if (updateError) {
-      console.error("submit-application: failed to update application with discord IDs", { error: updateError.message, application_id: app.id });
+      log("error", "submit-application: failed to update application with discord IDs", { error: updateError.message, application_id: app.id }, ["error", "application_id"]);
     }
 
     return new Response(JSON.stringify({ ok:true, id: app.id }), { headers:{ "Content-Type":"application/json", ...CORS }});
   } catch (e:any) {
-    console.error("submit-application: unhandled error", { error: e?.message ?? String(e) });
+    log("error", "submit-application: unhandled error", { error: e?.message ?? String(e) }, ["error"]);
     return new Response(JSON.stringify({ error: e?.message ?? String(e) }), { status:500, headers:{ "Content-Type":"application/json", ...CORS }});
   }
 });

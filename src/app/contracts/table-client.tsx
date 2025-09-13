@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { log } from "../../lib/log";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { Button } from "@/components/ui/button";
 import { getTimestampLocalTimezone } from "@/lib/utils";
@@ -55,7 +56,7 @@ async function fetchContracts(): Promise<ContractRow[]> {
     )
     .order("created_at", { ascending: false });
   if (error) {
-    console.error("Failed to load contracts", { error });
+    log("error", "Failed to load contracts", { error }, ["error"]);
     throw new Error("Failed to load contracts.");
   }
   return (data ?? []) as unknown as ContractRow[];

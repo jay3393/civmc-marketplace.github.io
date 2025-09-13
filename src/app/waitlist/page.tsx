@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { useSupabaseUser } from "@/components/auth/auth-button";
+import { log } from "../../lib/log";
 
 export default function WaitlistPage() {
   const user = useSupabaseUser();
@@ -25,7 +26,7 @@ export default function WaitlistPage() {
         .from("profiles")
         .select("*", { count: "exact", head: true });
       if (error) {
-        console.error("Error fetching waitlist count:", error);
+        log("error", "Error fetching waitlist count", { error }, ["error"]);
         return;
       }
       if (count !== null) {

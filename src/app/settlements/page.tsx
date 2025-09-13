@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { log } from "../../lib/log";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
@@ -445,12 +446,11 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         if (flagFile) {
           const { data: flagUrl, error: flagError } = await sb.storage.from("settlement-images/nations").upload(`${Date.now()}-${name.trim()}.png`, flagFile);
           if (flagError) {
-            console.warn("Storage error uploading flag", flagError);
+            log("warn", "Storage error uploading flag", { flagError }, ["flagError"]);
             setError("Failed to upload flag. Please try again later.");
             return;
           }
           fullFlagUrl = flagUrl.fullPath;
-          console.log("flagUrl", fullFlagUrl);
         }
 
         const payload = {
@@ -468,7 +468,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
 
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
-          console.warn("submit-application nation failed", fxError);
+          log("warn", "submit-application nation failed", { fxError }, ["fxError"]);
           setError("Failed to submit application. Please try again later.");
           return;
         }
@@ -476,7 +476,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         toast.success("Nation submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected submit-application error (nation)", e);
+        log("warn", "Unexpected submit-application error (nation)", { error: e }, ["error"]);
         setError("Failed to submit application. Please try again later.");
         toast.error("Failed to submit nation.");
       }
@@ -621,7 +621,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         };
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
-          console.warn("submit-application settlement failed", fxError);
+          log("warn", "submit-application settlement failed", { fxError }, ["fxError"]);
           setError("Failed to submit application. Please try again later.");
           return;
         }
@@ -629,7 +629,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         toast.success("Settlement submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected submit-application error (settlement)", e);
+        log("warn", "Unexpected submit-application error (settlement)", { error: e }, ["error"]);
         setError("Failed to submit application. Please try again later.");
         toast.error("Failed to submit settlement.");
       }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSupabaseBrowser } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
+import { log } from "../../lib/log";
 
 export function useSupabaseUser() {
   const [user, setUser] = useState<null | { id: string; user_metadata?: Record<string, unknown> }>(null);
@@ -40,11 +41,11 @@ export default function AuthButton() {
       const redirectTo = typeof window !== "undefined" ? `${window.location.href}` : undefined;
       const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
       if (error) {
-        console.error("Auth error", error);
+        log("error", "Auth error", { error }, ["error"]);
         setLoading(false);
       }
     } catch (e) {
-      console.error("Unexpected auth error", e);
+      log("error", "Unexpected auth error", { error: e }, ["error"]);
       setLoading(false);
     }
   }

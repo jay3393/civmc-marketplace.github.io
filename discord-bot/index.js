@@ -17,13 +17,23 @@ import {
   const SUPABASE_BEARER = process.env.SUPABASE_BEARER; // shared secret
   const SUPABASE_API_KEY = process.env.SUPABASE_ANON_KEY; // shared secret
   const LOG_LEVEL = process.env.LOG_LEVEL || "info";
-  
-  if (!TOKEN || !APP_ID || !INGEST_URL || !SUPABASE_BEARER) {
-    console.error("Missing env vars: DISCORD_BOT_TOKEN, DISCORD_APP_ID, INGEST_URL, SUPABASE_BEARER");
-    process.exit(1);
+
+  function log(level, msg, extra = {}, allow = []) {
+    if (level === 'debug' && LOG_LEVEL !== 'debug') return;
+    const base = { t: new Date().toISOString(), level, msg };
+    const safe = {};
+    for (const key of allow) {
+      if (Object.prototype.hasOwnProperty.call(extra, key)) {
+        safe[key] = extra[key];
+      }
+    }
+    (level === 'error' ? console.error : console.log)({ ...base, ...safe });
   }
   
-  const log = (...args) => (LOG_LEVEL === "debug" ? console.log("[DEBUG]", ...args) : null);
+  if (!TOKEN || !APP_ID || !INGEST_URL || !SUPABASE_BEARER) {
+    log('error', 'Missing env vars: DISCORD_BOT_TOKEN, DISCORD_APP_ID, INGEST_URL, SUPABASE_BEARER');
+    process.exit(1);
+  }
   
   /** ---------- BOT CLIENT ---------- **/
   const client = new Client({
@@ -51,8 +61,8 @@ import {
       // PermissionsBitField.Flags.AddReactions
     );
     const permissions = perms.bitfield.toString(); // bigint -> string
-    console.log(permissions);
-    console.log("Right permissions: 309237763072");
+    log('debug', 'calculated permissions', { permissions }, ['permissions']);
+    log('debug', 'expected permissions', { expected: '309237763072' }, ['expected']);
     // Scopes: bot + application commands (for slash commands)
     return `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=${permissions}&scope=bot%20applications.commands`;
   }
@@ -85,7 +95,7 @@ import {
         },
       ],
     });
-    console.log(`[commands] Registered in guild ${guildId}`);
+    log('info', '[commands] Registered in guild', { guildId }, ['guildId']);
   }
   
   /** ---------- LIFECYCLE ---------- **/
@@ -95,16 +105,16 @@ import {
     for (const [id] of guilds) {
         await registerCommands(id);
     }
-    console.log(`✅ Logged in as ${client.user.tag}`);
-    console.log(`🔗 Invite URL: ${buildInviteURL()}`);
-    console.log("   (Share this with nation admins to add the bot to their servers.)");
+    log('info', 'logged in', { user: client.user.tag }, ['user']);
+    log('info', 'invite url', { url: buildInviteURL() }, ['url']);
+    log('info', 'share with nation admins');
   });
   
   client.on(Events.GuildCreate, async (guild) => {
     try {
       await registerCommands(guild.id);
     } catch (e) {
-      console.error("[commands] register failed", e);
+      log('error', '[commands] register failed', { error: e?.message }, ['error']);
     }
   });
   
@@ -166,7 +176,7 @@ import {
         }
       }
     } catch (e) {
-      console.error("[interaction] error", e);
+      log('error', '[interaction] error', { error: e?.message }, ['error']);
     }
   });
   
@@ -212,12 +222,12 @@ import {
   
       if (!r.ok) {
         const t = await r.text();
-        console.error("[ingest] failed", r.status, t);
+        log('error', '[ingest] failed', { status: r.status, body: t }, ['status', 'body']);
       } else {
         log("[ingest] ok for thread", thread.id);
       }
     } catch (e) {
-      console.error("[thread_create] error", e);
+      log('error', '[thread_create] error', { error: e?.message }, ['error']);
     }
   });
   

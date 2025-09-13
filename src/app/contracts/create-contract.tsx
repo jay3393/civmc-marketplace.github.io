@@ -39,6 +39,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSupabaseUser } from "@/components/auth/auth-button";
 import { toast } from "sonner";
 import AuthButton from "@/components/auth/auth-button";
+import { log } from "../../lib/log";
 
 const CATEGORY_OPTIONS = [
   "Building",
@@ -188,7 +189,7 @@ export default function CreateContract() {
         .single();             // single row
 
         if (insertError || !inserted?.id) {
-          console.error("Failed to create contract", { insertError });
+          log("error", "Failed to create contract", { insertError }, ["insertError"]);
           const msg = insertError?.message || "Could not create contract. Please try again.";
           setError(msg);
           return;
@@ -204,7 +205,7 @@ export default function CreateContract() {
         // 3) UI feedback
         if (fxError) {
           // Contract is created; Discord failed — warn but don't roll back
-          console.warn("Discord post failed", fxError);
+          log("warn", "Discord post failed", { fxError }, ["fxError"]);
           setSuccess("Contract created. (Heads up: Discord post failed — try re‑posting from the contract page.)");
           toast.warning("Contract created, but Discord post failed.");
         } else if (fxData?.already_posted) {
@@ -224,7 +225,7 @@ export default function CreateContract() {
           setError("You must be logged in to create a contract.");
           toast.error("Please log in to create a contract");
         } else {
-          console.error("Unexpected error creating contract", e);
+          log("error", "Unexpected error creating contract", { error: e }, ["error"]);
           setError("Could not create contract. Please try again.");
           toast.error("Failed to create contract");
         }

@@ -43,7 +43,6 @@ function isAlphaGated(pathname: string) {
 }
 
 export async function middleware(req: NextRequest) {
-  console.log("[mw] hit", req.nextUrl.pathname);
   const { pathname } = req.nextUrl;
 
   // 0) Never redirect the waitlist itself (prevents loops)
@@ -62,12 +61,8 @@ export async function middleware(req: NextRequest) {
     const supabase = await createSupabaseMiddlewareClient(req, res);
 
     const { data: { user } } = await supabase.auth.getUser();
-    console.log("[mw] alpha tester user", user);
-
     if (user) {
-      const { data, error } = await supabase.from('alpha_testers').select('*').eq('user_id', user.id).maybeSingle();
-      console.log("[mw] alpha tester data", data);
-      console.log("[mw] alpha tester error", error);
+      const { data } = await supabase.from('alpha_testers').select('*').eq('user_id', user.id).maybeSingle();
       if (!data) {
         return NextResponse.redirect(new URL("/waitlist", req.url));
       }

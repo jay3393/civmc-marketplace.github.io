@@ -102,7 +102,7 @@ import {
     try {
       await registerCommands(guild.id);
     } catch (e) {
-      console.error("[commands] register failed", (e as Error)?.message ?? String(e));
+      console.error("[commands] register failed", (e)?.message ?? String(e));
     }
   });
   
@@ -164,7 +164,7 @@ import {
         }
       }
     } catch (e) {
-      console.error("[interaction] error", (e as Error)?.message ?? String(e));
+      console.error("[interaction] error", (e)?.message ?? String(e));
     }
   });
   
@@ -215,7 +215,7 @@ import {
         log("[ingest] ok for thread", thread.id);
       }
     } catch (e) {
-      console.error("[thread_create] error", (e as Error)?.message ?? String(e));
+      console.error("[thread_create] error", (e)?.message ?? String(e));
     }
   });
   

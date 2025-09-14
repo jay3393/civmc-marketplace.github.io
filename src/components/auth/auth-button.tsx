@@ -53,15 +53,15 @@ export default function AuthButton() {
         ? `${window.location.origin}/auth/callback`
         : undefined;
       const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
-      if (error) {
-        console.error("Auth error", error);
+        if (error) {
+          console.error("Auth error", error.message);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error("Unexpected auth error", (e as Error)?.message ?? String(e));
         setLoading(false);
       }
-    } catch (e) {
-      console.error("Unexpected auth error", e);
-      setLoading(false);
     }
-  }
 
   async function signOut() {
     const sb = getSupabaseBrowser();

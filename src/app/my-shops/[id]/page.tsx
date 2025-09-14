@@ -154,9 +154,9 @@ export default function ManageShopPage() {
         const up = await sb.storage.from("shop-images").upload(path, bannerFile, { upsert: true });
         // update shop banner_url
         const { error: updateError } = await sb.from("shops").update({ banner_url: path }).eq("id", shopId);
-        if (updateError) {
-          console.error("Error updating shop banner_url:", updateError);
-        }
+          if (updateError) {
+            console.error("Error updating shop banner_url:", updateError.message);
+          }
         if (!up.error) {
           const pub = sb.storage.from("shop-images").getPublicUrl(path);
           const url = pub.data?.publicUrl;

@@ -176,7 +176,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
         }
       } catch (e) {
-        console.error("[contracts-setup] ingest error:", e);
+        console.error("[contracts-setup] ingest error:", (e as Error)?.message ?? String(e));
         return respondEphemeral("❌ Failed to reach ingest function.", []);
       }
     }
@@ -264,7 +264,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
         }
       } catch (e) {
-        console.error("[contracts-setup] ingest error:", e);
+        console.error("[contracts-setup] ingest error:", (e as Error)?.message ?? String(e));
         return respondEphemeral("❌ Failed to reach ingest function.", []);
       }
     }
@@ -339,7 +339,7 @@ serve(async (req) => {
           discord: app.data.discord ?? null,
           active: true,
         }).select().single();
-        if (nationErr) console.error("❌ DB error (nation):", nationErr);
+        if (nationErr) console.error("❌ DB error (nation):", nationErr.message);
         console.log("✅ Nation created:", nation);
       } else {
         const { data: settlement, error: settlementErr } = await sb.from("settlements").insert({
@@ -354,7 +354,7 @@ serve(async (req) => {
           size: app.data.size ?? null,
           active: true,
         }).select().single();
-        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr);
+        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr.message);
         console.log("✅ Settlement created:", settlement);
       }
       await sb.from("applications").update({ status: "approved" }).eq("id", application_id);

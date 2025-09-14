@@ -445,7 +445,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         if (flagFile) {
           const { data: flagUrl, error: flagError } = await sb.storage.from("settlement-images/nations").upload(`${Date.now()}-${name.trim()}.png`, flagFile);
           if (flagError) {
-            console.warn("Storage error uploading flag", flagError);
+            console.warn("Storage error uploading flag", flagError.message);
             setError("Failed to upload flag. Please try again later.");
             return;
           }
@@ -467,7 +467,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
 
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
-          console.warn("submit-application nation failed", fxError);
+          console.warn("submit-application nation failed", fxError.message);
           setError("Failed to submit application. Please try again later.");
           return;
         }
@@ -475,7 +475,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         toast.success("Nation submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected submit-application error (nation)", e);
+        console.warn("Unexpected submit-application error (nation)", (e as Error)?.message ?? String(e));
         setError("Failed to submit application. Please try again later.");
         toast.error("Failed to submit nation.");
       }
@@ -620,7 +620,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         };
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
-          console.warn("submit-application settlement failed", fxError);
+          console.warn("submit-application settlement failed", fxError.message);
           setError("Failed to submit application. Please try again later.");
           return;
         }
@@ -628,7 +628,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         toast.success("Settlement submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected submit-application error (settlement)", e);
+        console.warn("Unexpected submit-application error (settlement)", (e as Error)?.message ?? String(e));
         setError("Failed to submit application. Please try again later.");
         toast.error("Failed to submit settlement.");
       }

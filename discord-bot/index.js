@@ -51,8 +51,6 @@ import {
       // PermissionsBitField.Flags.AddReactions
     );
     const permissions = perms.bitfield.toString(); // bigint -> string
-    console.log(permissions);
-    console.log("Right permissions: 309237763072");
     // Scopes: bot + application commands (for slash commands)
     return `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=${permissions}&scope=bot%20applications.commands`;
   }
@@ -85,7 +83,7 @@ import {
         },
       ],
     });
-    console.log(`[commands] Registered in guild ${guildId}`);
+    log(`[commands] Registered in guild ${guildId}`);
   }
   
   /** ---------- LIFECYCLE ---------- **/
@@ -96,15 +94,15 @@ import {
         await registerCommands(id);
     }
     console.log(`✅ Logged in as ${client.user.tag}`);
-    console.log(`🔗 Invite URL: ${buildInviteURL()}`);
-    console.log("   (Share this with nation admins to add the bot to their servers.)");
+    log(`🔗 Invite URL: ${buildInviteURL()}`);
+    log("   (Share this with nation admins to add the bot to their servers.)");
   });
   
   client.on(Events.GuildCreate, async (guild) => {
     try {
       await registerCommands(guild.id);
     } catch (e) {
-      console.error("[commands] register failed", e);
+      console.error("[commands] register failed", (e as Error)?.message ?? String(e));
     }
   });
   
@@ -166,7 +164,7 @@ import {
         }
       }
     } catch (e) {
-      console.error("[interaction] error", e);
+      console.error("[interaction] error", (e as Error)?.message ?? String(e));
     }
   });
   
@@ -217,7 +215,7 @@ import {
         log("[ingest] ok for thread", thread.id);
       }
     } catch (e) {
-      console.error("[thread_create] error", e);
+      console.error("[thread_create] error", (e as Error)?.message ?? String(e));
     }
   });
   

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -188,7 +188,7 @@ export default function CreateContract() {
         .single();             // single row
 
         if (insertError || !inserted?.id) {
-          console.error("Failed to create contract", { insertError });
+          console.error("Failed to create contract", insertError?.message);
           const msg = insertError?.message || "Could not create contract. Please try again.";
           setError(msg);
           return;
@@ -204,7 +204,7 @@ export default function CreateContract() {
         // 3) UI feedback
         if (fxError) {
           // Contract is created; Discord failed — warn but don't roll back
-          console.warn("Discord post failed", fxError);
+            console.warn("Discord post failed", fxError.message);
           setSuccess("Contract created. (Heads up: Discord post failed — try re‑posting from the contract page.)");
           toast.warning("Contract created, but Discord post failed.");
         } else if (fxData?.already_posted) {
@@ -218,17 +218,17 @@ export default function CreateContract() {
         setOpen(false);
         // Refresh any contract lists
         queryClient.invalidateQueries({ queryKey: ["contracts"], exact: false });
-      } catch (e) {
-        const message = e instanceof Error ? e.message : "Could not create contract. Please try again.";
-        if (message.toLowerCase().includes("not authenticated")) {
-          setError("You must be logged in to create a contract.");
-          toast.error("Please log in to create a contract");
-        } else {
-          console.error("Unexpected error creating contract", e);
-          setError("Could not create contract. Please try again.");
-          toast.error("Failed to create contract");
+        } catch (e) {
+          const message = e instanceof Error ? e.message : "Could not create contract. Please try again.";
+          if (message.toLowerCase().includes("not authenticated")) {
+            setError("You must be logged in to create a contract.");
+            toast.error("Please log in to create a contract");
+          } else {
+            console.error("Unexpected error creating contract", (e as Error)?.message ?? String(e));
+            setError("Could not create contract. Please try again.");
+            toast.error("Failed to create contract");
+          }
         }
-      }
     });
   }
 

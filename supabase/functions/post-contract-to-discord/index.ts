@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const CORS = {
-  "Access-Control-Allow-Origin": "https://civhub.net",
+  "Access-Control-Allow-Origin": "https://www.civhub.net",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
@@ -13,6 +13,8 @@ const FORUM_CHANNEL_ID = Deno.env.get("DISCORD_FORUM_CHANNEL_ID"); // the forum 
 const SITE_ORIGIN = (Deno.env.get("PUBLIC_SITE_ORIGIN") ?? "").replace(/\/$/, "");
 // optional: comma-separated forum tag IDs (snowflakes)
 const FORUM_TAG_IDS = (Deno.env.get("DISCORD_FORUM_TAG_IDS") ?? "").split(",").map((s)=>s.trim()).filter(Boolean);
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
+const SHARED_SECRET = Deno.env.get("POST_CONTRACT_SHARED_SECRET") || "";
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: {
     persistSession: false
@@ -26,6 +28,16 @@ serve(async (req)=>{
     status: 405,
     headers: CORS
   });
+  const authHeader = req.headers.get("authorization") || "";
+  if (!authHeader.startsWith("Bearer ") || authHeader.slice(7) !== ANON_KEY) {
+    return new Response("Unauthorized", { status: 401, headers: CORS });
+  }
+  if (SHARED_SECRET) {
+    const provided = req.headers.get("x-shared-secret") || "";
+    if (provided !== SHARED_SECRET) {
+      return new Response("Forbidden", { status: 403, headers: CORS });
+    }
+  }
   try {
     const { contract_id } = await req.json();
     if (!contract_id) return new Response("Missing contract_id", {

@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "minecraft.wiki" },
       { protocol: "https", hostname: "raw.githubusercontent.com" },
       { protocol: "https", hostname: "minotar.net" },
+      { protocol: "https", hostname: "frluejxaygdwwyawhgyc.supabase.co" },
     ],
   },
 };

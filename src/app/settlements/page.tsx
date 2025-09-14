@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
@@ -445,12 +445,11 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         if (flagFile) {
           const { data: flagUrl, error: flagError } = await sb.storage.from("settlement-images/nations").upload(`${Date.now()}-${name.trim()}.png`, flagFile);
           if (flagError) {
-            console.warn("Storage error uploading flag", flagError);
+            console.warn("Storage error uploading flag", flagError.message);
             setError("Failed to upload flag. Please try again later.");
             return;
           }
           fullFlagUrl = flagUrl.fullPath;
-          console.log("flagUrl", fullFlagUrl);
         }
 
         const payload = {
@@ -468,7 +467,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
 
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
-          console.warn("submit-application nation failed", fxError);
+          console.warn("submit-application nation failed", fxError.message);
           setError("Failed to submit application. Please try again later.");
           return;
         }
@@ -476,7 +475,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
         toast.success("Nation submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected submit-application error (nation)", e);
+        console.warn("Unexpected submit-application error (nation)", (e as Error)?.message ?? String(e));
         setError("Failed to submit application. Please try again later.");
         toast.error("Failed to submit nation.");
       }
@@ -525,7 +524,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
       </div>
       <div className="grid gap-2">
         <Label>Upload nation thumbnail</Label>
-        <input ref={fileInputRef} id="flag" type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+        <input ref={fileInputRef} id="flag" type="file" accept="image/png, image/jpeg, image/jpg" className="hidden" onChange={onPickFile} />
         <label htmlFor="flag" className="cursor-pointer">
           <div className="rounded-lg border bg-white text-slate-900 p-4 hover:bg-slate-50 transition grid gap-3">
             <div className="flex items-center gap-3">
@@ -536,7 +535,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
               </div>
               <div className="text-sm">
                 <div className="font-medium">Click to select an image</div>
-                <div className="text-xs text-muted-foreground">PNG, JPG, or GIF. Max a few MB.</div>
+                <div className="text-xs text-muted-foreground">PNG, JPG, or JPEG. 5MB max.</div>
               </div>
             </div>
             {flagFile ? (
@@ -621,7 +620,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         };
         const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
         if (fxError) {
-          console.warn("submit-application settlement failed", fxError);
+          console.warn("submit-application settlement failed", fxError.message);
           setError("Failed to submit application. Please try again later.");
           return;
         }
@@ -629,7 +628,7 @@ function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: ()
         toast.success("Settlement submitted. Our team will review it soon.");
         onDone();
       } catch (e) {
-        console.warn("Unexpected submit-application error (settlement)", e);
+        console.warn("Unexpected submit-application error (settlement)", (e as Error)?.message ?? String(e));
         setError("Failed to submit application. Please try again later.");
         toast.error("Failed to submit settlement.");
       }

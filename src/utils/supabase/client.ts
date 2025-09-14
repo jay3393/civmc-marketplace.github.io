@@ -15,7 +15,8 @@ export function getSupabaseBrowser(): SupabaseClient {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          storageKey: "civmc-auth-v1",
+          storageKey: "civmc-auth-v3",
+          flowType: "pkce",
           persistSession: true,
           detectSessionInUrl: true,
         },

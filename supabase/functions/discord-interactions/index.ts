@@ -8,7 +8,8 @@ import { PermissionFlagsBits } from "https://deno.land/x/discord_api_types/v10.t
 const DISCORD_PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;  // from Dev Portal
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "1");
+const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "2");
+const REQUIRED_REJECTS = Number(Deno.env.get("REQUIRED_REJECTS") || "1");
 const APP_ID = Deno.env.get("DISCORD_APP_ID")!;
 const INGEST_URL = Deno.env.get("INGEST_URL")!;
 const SUPABASE_BEARER = Deno.env.get("_SUPABASE_BEARER")!;
@@ -33,7 +34,7 @@ function applyOverwrite(base: bigint, allow: bigint, deny: bigint) {
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession:false } });
 
 const CORS = {
-  "Access-Control-Allow-Origin": "https://civhub.net",
+  "Access-Control-Allow-Origin": "https://www.civhub.net",
   "Access-Control-Allow-Headers": "content-type, x-signature-ed25519, x-signature-timestamp",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -175,7 +176,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
         }
       } catch (e) {
-        console.error("[contracts-setup] ingest error:", e);
+        console.error("[contracts-setup] ingest error:", (e as Error)?.message ?? String(e));
         return respondEphemeral("❌ Failed to reach ingest function.", []);
       }
     }
@@ -263,7 +264,7 @@ serve(async (req) => {
           return respondEphemeral(`❌ Failed to save: ${t || resp.status}`, []);
         }
       } catch (e) {
-        console.error("[contracts-setup] ingest error:", e);
+        console.error("[contracts-setup] ingest error:", (e as Error)?.message ?? String(e));
         return respondEphemeral("❌ Failed to reach ingest function.", []);
       }
     }
@@ -312,11 +313,23 @@ serve(async (req) => {
 
     // If threshold met → create entity + mark approved
     let finalized = false;
+    let rejected = false;
     // Load app
     const { data: app } = await sb.from("applications").select("*").eq("id", application_id).maybeSingle();
     if (!app) return respondEphemeral("❌ Application not found.", []);
 
+    if (app.status === "pending" && rejects >= REQUIRED_REJECTS) {
+      await sb.from("applications").update({ status: "rejected" }).eq("id", application_id);
+      await sb.from("application_reviews").delete().eq("application_id", application_id);
+      rejected = true;
+    }
+
     if (app.status === "pending" && approvals >= REQUIRED_APPROVALS) {
+      // delete application_reviews
+      await sb.from("application_reviews").delete().eq("application_id", application_id);
+      // delete application
+      await sb.from("applications").delete().eq("id", application_id);
+      // create nation or settlement
       if (app.kind === "nation") {
         const { data: nation, error: nationErr } = await sb.from("nations").insert({
           nation_name: app.data.nation_name,
@@ -326,7 +339,7 @@ serve(async (req) => {
           discord: app.data.discord ?? null,
           active: true,
         }).select().single();
-        if (nationErr) console.error("❌ DB error (nation):", nationErr);
+        if (nationErr) console.error("❌ DB error (nation):", nationErr.message);
         console.log("✅ Nation created:", nation);
       } else {
         const { data: settlement, error: settlementErr } = await sb.from("settlements").insert({
@@ -341,7 +354,7 @@ serve(async (req) => {
           size: app.data.size ?? null,
           active: true,
         }).select().single();
-        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr);
+        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr.message);
         console.log("✅ Settlement created:", settlement);
       }
       await sb.from("applications").update({ status: "approved" }).eq("id", application_id);
@@ -349,7 +362,7 @@ serve(async (req) => {
     }
 
     // Build new components/embeds for the message update
-    const disable = finalized;
+    const disable = finalized || rejected;
     const components = [
       {
         type: 1,
@@ -359,9 +372,15 @@ serve(async (req) => {
         ]
       }
     ];
-    const content = finalized
-      ? "✅ **Approved** — threshold met."
-      : `Pending • Approvals: **${approvals}** / ${REQUIRED_APPROVALS} • Rejects: ${rejects}`;
+    
+    let content = "";
+    if (finalized) {
+      content = "✅ **Application Approved**";
+    } else if (rejected) {
+      content = "❌ **Application Rejected**";
+    } else {
+      content = `Pending • Approvals: **${approvals}** / ${REQUIRED_APPROVALS} • Rejects: ${rejects}`;
+    }
 
     // Respond with UPDATE_MESSAGE (type 7) to edit the original message in-place
     return new Response(JSON.stringify({

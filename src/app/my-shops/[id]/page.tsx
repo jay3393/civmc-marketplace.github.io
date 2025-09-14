@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSupabaseUser } from "@/components/auth/auth-button";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,15 @@ import type { DbShop } from "@/data/shops-db";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+
+function resolveBannerUrl(src: string | null | undefined) {
+  if (!src) return "/images/default_settlement.jpg";
+  if (src.startsWith("blob:")) return src; // local preview, use <img>
+  if (/^https?:\/\//i.test(src)) return src;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return "/images/default_settlement.jpg";
+  return `${base}/storage/v1/object/public/shop-images/${src}`;
+}
 
 export default function ManageShopPage() {
   const params = useParams();
@@ -235,14 +244,17 @@ export default function ManageShopPage() {
       {/* Banner preview & upload */}
       <div className="rounded-xl border overflow-hidden">
         <div className="relative h-40 sm:h-48 bg-muted">
-          {bannerPreview ? (
-            <Image src={bannerPreview} alt="Shop banner" className="absolute inset-0 h-full w-full object-cover" />
-          ) : (
-            <Image src="/images/default_settlement.jpg" alt="Shop banner" fill className="absolute inset-0 h-full w-full object-cover" />
-          )}
+          {(() => {
+            const resolved = resolveBannerUrl(bannerPreview);
+            if (resolved.startsWith("blob:")) {
+              // eslint-disable-next-line @next/next/no-img-element
+              return <img src={resolved} alt="Shop banner" className="absolute inset-0 h-full w-full object-cover" />;
+            }
+            return <Image src={resolved} alt="Shop banner" fill className="absolute inset-0 h-full w-full object-cover" />;
+          })()}
         </div>
         <div className="p-3 grid gap-2">
-          <input ref={fileInputRef} id="banner" type="file" accept="image/*" className="hidden" onChange={onPickBanner} />
+          <input ref={fileInputRef} id="banner" type="file" accept="image/png, image/jpeg, image/jpg" className="hidden" onChange={onPickBanner} />
           <label htmlFor="banner" className="cursor-pointer">
             <div className="rounded-lg border bg-white text-slate-900 p-4 hover:bg-slate-50 transition grid gap-3">
               <div className="flex items-center gap-3">
@@ -253,7 +265,7 @@ export default function ManageShopPage() {
                 </div>
                 <div className="text-sm">
                   <div className="font-medium">Click to select a banner image</div>
-                  <div className="text-xs text-muted-foreground">PNG, JPG, or GIF. Max a few MB.</div>
+                  <div className="text-xs text-muted-foreground">PNG, JPG, or JPEG. 5MB max.</div>
                 </div>
               </div>
               {bannerFile ? (
@@ -261,7 +273,12 @@ export default function ManageShopPage() {
                   <div className="text-xs text-muted-foreground">Selected: {bannerFile.name}</div>
                   {bannerPreview ? (
                     <div className="relative h-28 w-full overflow-hidden rounded border bg-muted/40">
-                      <Image src={bannerPreview} alt="Preview" className="absolute inset-0 h-full w-full object-cover" />
+                      {resolveBannerUrl(bannerPreview).startsWith("blob:") ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={bannerPreview} alt="Preview" className="absolute inset-0 h-full w-full object-cover" />
+                      ) : (
+                        <Image src={resolveBannerUrl(bannerPreview)} alt="Preview" fill className="absolute inset-0 h-full w-full object-cover" />
+                      )}
                     </div>
                   ) : null}
                 </div>

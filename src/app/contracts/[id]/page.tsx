@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 type ContractDetail = {

@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSupabaseUser } from "@/components/auth/auth-button";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 
 export default function UsernamePrompt() {
   const user = useSupabaseUser();
@@ -56,7 +56,7 @@ export default function UsernamePrompt() {
         <AlertTitle>Complete your profile</AlertTitle>
         <AlertDescription>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
-            <span className="text-sm">Set your Minecraft username to enable posting contracts.</span>
+            <span className="text-sm">Almost done! Set your Minecraft username for a better experience.</span>
             <div className="flex items-center gap-2">
               <Input placeholder="Minecraft username" value={username} onChange={(e) => setUsername(e.target.value)} className="h-9 w-56" />
               <Button size="sm" onClick={save} disabled={isSaving || !username.trim()}>Save</Button>

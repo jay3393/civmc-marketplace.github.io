@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSupabaseUser } from "@/components/auth/auth-button";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";

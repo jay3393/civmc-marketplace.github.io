@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getTimestampLocalTimezone } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import type { DbShop } from "@/data/shops-db";
 
 // Resolve a banner URL possibly stored as a Supabase Storage path
@@ -73,7 +73,6 @@ export default function MarketplacePage() {
   const [shops, setShops] = useState<DbShop[]>([]);
   const [loading, setLoading] = useState(true);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
-  const [reviewCounts, setReviewCounts] = useState<Record<string, number>>({});
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
 
   async function fetchShopsApi(params: { q: string; sortKey: SortKey }) {
@@ -116,7 +115,7 @@ export default function MarketplacePage() {
         .from("shop_items")
         .select("shop_id")
         .eq("is_listed", true)
-        .or(`item_name.ilike.${pattern}`);
+        .or(`output_item_name.ilike.${pattern}`);
       const ids = new Set<string>();
       for (const r of (items ?? []) as Array<{ shop_id: string }>) ids.add(r.shop_id);
       itemShopIds = Array.from(ids);
@@ -158,7 +157,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     async function loadCounts() {
       const ids = shops.map((s) => s.id);
-      if (ids.length === 0) { setItemCounts({}); setReviewCounts({}); return; }
+      if (ids.length === 0) { setItemCounts({}); return; }
       const sb = getSupabaseBrowser();
       const { data: itemsRows } = await sb
         .from("shop_items")
@@ -170,17 +169,6 @@ export default function MarketplacePage() {
         itemsMap[r.shop_id] = (itemsMap[r.shop_id] ?? 0) + 1;
       }
       setItemCounts(itemsMap);
-      try {
-        const { data: reviewRows } = await sb
-          .from("shop_reviews")
-          .select("shop_id")
-          .in("shop_id", ids);
-        const revMap: Record<string, number> = {};
-        for (const r of (reviewRows ?? []) as Array<{ shop_id: string }>) revMap[r.shop_id] = (revMap[r.shop_id] ?? 0) + 1;
-        setReviewCounts(revMap);
-      } catch {
-        setReviewCounts({});
-      }
     }
     loadCounts();
   }, [shops]);
@@ -309,7 +297,8 @@ export default function MarketplacePage() {
               {/* Top banner with shop image */}
               <div className="relative h-36 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
+                  fill
                   src={resolveBannerUrl((shop as unknown as { banner_url?: string | null }).banner_url)}
                   alt={shop.shop_name}
                   className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105"

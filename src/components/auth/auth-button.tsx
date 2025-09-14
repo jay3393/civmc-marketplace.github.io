@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function useSupabaseUser() {
@@ -32,12 +32,26 @@ export default function AuthButton() {
   const meta = (user?.user_metadata ?? {}) as DiscordUserMetadata;
   const username = meta.custom_claims?.global_name ?? null;
   const avatarUrl = meta.avatar_url ?? null;
+  const [mcUsername, setMcUsername] = useState<string | null>(null);
+  const [mcAvatar, setMcAvatar] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      const sb = getSupabaseBrowser();
+      sb.from("profiles").select("username").eq("id", user!.id).maybeSingle().then(({ data }) => {
+        setMcUsername(data?.username ?? null);
+        setMcAvatar(`https://minotar.net/avatar/${data?.username}/16.png`);
+      });
+    }
+  }, [user]);
 
   async function signInWithDiscord() {
     try {
       setLoading(true);
       const sb = getSupabaseBrowser();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.href}` : undefined;
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback`
+        : undefined;
       const { error } = await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo, scopes: "identify,guilds" } });
         if (error) {
           console.error("Auth error", error.message);
@@ -74,11 +88,14 @@ export default function AuthButton() {
 
   return (
     <div className="flex items-center gap-2">
-      {avatarUrl ? (
+      {mcAvatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={mcAvatar} alt="avatar" className="h-6 w-6" />
+      ) : avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={avatarUrl} alt="avatar" className="h-6 w-6 rounded-full" />
       ) : null}
-      <span className="text-xs text-muted-foreground hidden sm:inline" title={username}>{username}</span>
+      <span className="text-xs text-muted-foreground hidden sm:inline" title={mcUsername ?? username}>{mcUsername ?? username}</span>
       <Button variant="outline" onClick={signOut} className="h-8 px-3 text-xs">Sign out</Button>
     </div>
   );

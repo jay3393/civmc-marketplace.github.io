@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabaseBrowser } from "@/lib/supabaseClient";
+import { getSupabaseBrowser } from "@/utils/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
@@ -524,7 +524,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
       </div>
       <div className="grid gap-2">
         <Label>Upload nation thumbnail</Label>
-        <input ref={fileInputRef} id="flag" type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+        <input ref={fileInputRef} id="flag" type="file" accept="image/png, image/jpeg, image/jpg" className="hidden" onChange={onPickFile} />
         <label htmlFor="flag" className="cursor-pointer">
           <div className="rounded-lg border bg-white text-slate-900 p-4 hover:bg-slate-50 transition grid gap-3">
             <div className="flex items-center gap-3">
@@ -535,7 +535,7 @@ function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => 
               </div>
               <div className="text-sm">
                 <div className="font-medium">Click to select an image</div>
-                <div className="text-xs text-muted-foreground">PNG, JPG, or GIF. Max a few MB.</div>
+                <div className="text-xs text-muted-foreground">PNG, JPG, or JPEG. 5MB max.</div>
               </div>
             </div>
             {flagFile ? (

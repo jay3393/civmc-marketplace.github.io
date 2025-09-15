@@ -296,7 +296,6 @@ export default function MarketplacePage() {
             >
               {/* Top banner with shop image */}
               <div className="relative h-36 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <Image
                   fill
                   src={resolveBannerUrl((shop as unknown as { banner_url?: string | null }).banner_url)}
@@ -305,11 +304,12 @@ export default function MarketplacePage() {
                 />
                 {/* Owner chip (top-left) */}
                 <div className="absolute top-2 left-2 inline-flex items-center gap-2 rounded-full border bg-white/90 backdrop-blur px-2 py-1 text-xs shadow-sm text-slate-900 max-w-[60%]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={`https://minotar.net/helm/${encodeURIComponent(ownerNames[shop.owner_id] ?? "user")}/100.png`}
                     alt="Owner avatar"
                     className="h-4 w-4 rounded-sm"
+                    height={16}
+                    width={16}
                   />
                   <span className="truncate">{ownerNames[shop.owner_id] ?? "Owner"}</span>
                 </div>

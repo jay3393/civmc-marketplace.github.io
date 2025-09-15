@@ -64,7 +64,7 @@ async function fetchNations(): Promise<{ id: string | number; nation_name: strin
     .eq("claim_type", "NATION")
     .order("name");
   if (error) return [];
-  return (data ?? []).map((r: any) => ({ id: r.id, nation_name: r.name }));
+  return (data ?? []).map((r: any) => ({ id: r.id, nation_name: r.name })); // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 async function fetchClaims(): Promise<ClaimsRow[]> {

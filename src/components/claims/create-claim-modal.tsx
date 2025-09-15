@@ -40,7 +40,7 @@ async function fetchNations(): Promise<NationOpt[]> {
     .select("id,name")
     .eq("claim_type", "NATION")
     .order("name");
-  return (data ?? []).map((r: any) => ({ id: r.id, nation_name: r.name }));
+  return (data ?? []).map((r: any) => ({ id: r.id, nation_name: r.name })); // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 async function getRequestor() {

@@ -100,7 +100,7 @@ async function loadSettlements(): Promise<SettlementOpt[]> {
   if (error) {
     throw new Error("Failed to load settlements.");
   }
-  const mapped = (data ?? []).map((r: any) => ({ id: Number(r.id), settlement_name: String(r.name) })) as SettlementOpt[];
+  const mapped = (data ?? []).map((r: any) => ({ id: Number(r.id), settlement_name: String(r.name) })) as SettlementOpt[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   return mapped;
 }
 

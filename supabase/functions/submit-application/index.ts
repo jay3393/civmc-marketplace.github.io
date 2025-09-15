@@ -106,12 +106,13 @@ function resolveImageUrl(rawFlag: unknown): string | null {
   }
 }
 
-function buildEmbed(params: { kind: string; name: string; description: string | null; data: any; appId: string; imageUrl: string | null }) {
-  const { kind, name, description, data, appId, imageUrl } = params;
+function buildEmbed(params: { kind: string; name: string; description: string | null; data: any; appId: string; imageUrl: string | null; submittedBy?: string | null }) {
+  const { kind, name, description, data, appId, imageUrl, submittedBy } = params;
   const color = pickColor(kind);
   const nameLine = name ? `**${name}**` : "**(unnamed)**";
   const desc = (description ?? "(no description)").slice(0, 2048);
   const topFields: any[] = [];
+  if (submittedBy) topFields.push({ name: "Submitted by", value: `<@${submittedBy}>`, inline: true });
   const coordsField = getCoordsField(data);
   if (coordsField) topFields.push(coordsField);
   const discordUrl = normalizeDiscordUrl(data);
@@ -198,7 +199,18 @@ serve(async (req) => {
 
     const imageUrl = resolveImageUrl(data?.flag_url);
 
-    const embed = buildEmbed({ kind, name: derivedName, description: derivedDescription, data, appId: app.id, imageUrl });
+    // Resolve submitter name for embed
+    let submittedBy: string | null = null;
+    if (requester_profile_id) {
+      const { data: submitter } = await sb.from("profiles").select("discord_user_id").eq("id", requester_profile_id).maybeSingle();
+      submittedBy = (submitter?.discord_user_id as string | undefined) ?? null;
+    }
+    if (!submittedBy) {
+      const um: any = (user?.user_metadata ?? {});
+      submittedBy = um?.global_name || um?.user_name || user?.id || null;
+    }
+
+    const embed = buildEmbed({ kind, name: derivedName, description: derivedDescription, data, appId: app.id, imageUrl, submittedBy });
     if (imageUrl) console.log("submit-application: imageUrl", imageUrl);
 
     const components = [

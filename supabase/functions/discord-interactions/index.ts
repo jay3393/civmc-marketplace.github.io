@@ -8,14 +8,14 @@ import { PermissionFlagsBits } from "https://deno.land/x/discord_api_types/v10.t
 const DISCORD_PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;  // from Dev Portal
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "2");
+const REQUIRED_APPROVALS = Number(Deno.env.get("REQUIRED_APPROVALS") || "1");
 const REQUIRED_REJECTS = Number(Deno.env.get("REQUIRED_REJECTS") || "1");
 const APP_ID = Deno.env.get("DISCORD_APP_ID")!;
 const INGEST_URL = Deno.env.get("INGEST_URL")!;
 const SUPABASE_BEARER = Deno.env.get("_SUPABASE_BEARER")!;
 const SUPABASE_API_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const DISCORD_BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN")!;
-
+ 
 const INVITE_PERMISSIONS = "309237763072";
 
 type Overwrite = { id: string; type: 0 | 1; allow: string; deny: string };
@@ -120,7 +120,7 @@ function isGuildAdmin(memberPerms: string): boolean {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return new Response("Method not allowed", { status:405, headers: CORS });
-
+  
   const bodyText = await req.text();
   const valid = await verifyDiscordRequest(req, bodyText);
   if (!valid) return new Response("Bad signature", { status: 401, headers: CORS });
@@ -325,37 +325,52 @@ serve(async (req) => {
     }
 
     if (app.status === "pending" && approvals >= REQUIRED_APPROVALS) {
-      // delete application_reviews
-      await sb.from("application_reviews").delete().eq("application_id", application_id);
-      // delete application
-      await sb.from("applications").delete().eq("id", application_id);
-      // create nation or settlement
+      // create claim (nation or settlement)
       if (app.kind === "nation") {
-        const { data: nation, error: nationErr } = await sb.from("nations").insert({
-          nation_name: app.data.nation_name,
+        const { data: claim, error: claimErr } = await sb.from("claims").insert({
+          name: app.data.nation_name,
           description: app.data.description ?? null,
-          x: app.data.x ?? null,
-          z: app.data.z ?? null,
-          discord: app.data.discord ?? null,
-          active: true,
-        }).select().single();
-        if (nationErr) console.error("❌ DB error (nation):", nationErr.message);
-        console.log("✅ Nation created:", nation);
-      } else {
-        const { data: settlement, error: settlementErr } = await sb.from("settlements").insert({
-          settlement_name: app.data.settlement_name,
-          description: app.data.description ?? null,
-          nation_name: app.data.nation_name ?? null,
-          x: app.data.x ?? null,
-          z: app.data.z ?? null,
-          discord: app.data.discord ?? null,
+          coord_x: app.data.x ?? null,
+          coord_z: app.data.z ?? null,
+          discord_url: app.data.discord ?? null,
+          image_url: app.data.flag_url ?? null,
           member_count: app.data.member_count ?? null,
           tags: app.data.tags ?? null,
-          size: app.data.size ?? null,
-          active: true,
+          diamond_count: app.data.diamond_count ?? null,
+          parent_claim: null,
+          is_active: true,
+          claim_type: "NATION",
         }).select().single();
-        if (settlementErr) console.error("❌ DB error (settlement):", settlementErr.message);
-        console.log("✅ Settlement created:", settlement);
+        if (claimErr) console.error("❌ DB error (claim:nation):", claimErr.message);
+        console.log("✅ Nation claim created:", claim);
+      } else {
+        // attempt to resolve parent nation by name
+        let parent_claim: number | null = null;
+        if (app.data.nation_name) {
+          const { data: parent } = await sb
+            .from("claims")
+            .select("id")
+            .eq("name", app.data.nation_name)
+            .eq("claim_type", "NATION")
+            .maybeSingle();
+          parent_claim = parent?.id ?? null;
+        }
+        const { data: claim, error: claimErr } = await sb.from("claims").insert({
+          name: app.data.settlement_name,
+          description: app.data.description ?? null,
+          parent_claim,
+          coord_x: app.data.x ?? null,
+          coord_z: app.data.z ?? null,
+          discord_url: app.data.discord ?? null,
+          member_count: app.data.member_count ?? null,
+          tags: app.data.tags ?? null,
+          diamond_count: app.data.diamond_count ?? null,
+          image_url: app.data.flag_url ?? null,
+          is_active: true,
+          claim_type: "SETTLEMENT",
+        }).select().single();
+        if (claimErr) console.error("❌ DB error (claim:settlement):", claimErr.message);
+        console.log("✅ Settlement claim created:", claim);
       }
       await sb.from("applications").update({ status: "approved" }).eq("id", application_id);
       finalized = true;

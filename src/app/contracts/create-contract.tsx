@@ -92,11 +92,16 @@ async function loadCurrencies(): Promise<Currency[]> {
 
 async function loadSettlements(): Promise<SettlementOpt[]> {
   const sb = getSupabaseBrowser();
-  const { data, error } = await sb.from("settlements").select("id,settlement_name").order("settlement_name");
+  const { data, error } = await sb
+    .from("claims")
+    .select("id,name")
+    .eq("claim_type", "SETTLEMENT")
+    .order("name");
   if (error) {
     throw new Error("Failed to load settlements.");
   }
-  return (data ?? []) as SettlementOpt[];
+  const mapped = (data ?? []).map((r: any) => ({ id: Number(r.id), settlement_name: String(r.name) })) as SettlementOpt[];
+  return mapped;
 }
 
 export default function CreateContract() {

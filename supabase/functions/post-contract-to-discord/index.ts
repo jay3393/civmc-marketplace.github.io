@@ -28,16 +28,16 @@ serve(async (req)=>{
     status: 405,
     headers: CORS
   });
-  const authHeader = req.headers.get("authorization") || "";
-  if (!authHeader.startsWith("Bearer ") || authHeader.slice(7) !== ANON_KEY) {
-    return new Response("Unauthorized", { status: 401, headers: CORS });
-  }
-  if (SHARED_SECRET) {
-    const provided = req.headers.get("x-shared-secret") || "";
-    if (provided !== SHARED_SECRET) {
-      return new Response("Forbidden", { status: 403, headers: CORS });
-    }
-  }
+  // const authHeader = req.headers.get("Authorization") || "";
+  // if (!authHeader.startsWith("Bearer ") || authHeader.slice(7) !== ANON_KEY) {
+  //   return new Response("Unauthorized", { status: 401, headers: CORS });
+  // }
+  // if (SHARED_SECRET) {
+  //   const provided = req.headers.get("x-shared-secret") || "";
+  //   if (provided !== SHARED_SECRET) {
+  //     return new Response("Forbidden", { status: 403, headers: CORS });
+  //   }
+  // }
   try {
     const { contract_id } = await req.json();
     if (!contract_id) return new Response("Missing contract_id", {

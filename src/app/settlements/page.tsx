@@ -1,38 +1,41 @@
 "use client";
 
-import { useMemo, useState, useTransition, useRef } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/utils/supabase/client";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { toast } from "sonner";
 import Image from "next/image";
 import AuthButton, { useSupabaseUser } from "@/components/auth/auth-button";
+import CreateClaimModal from "@/components/claims/create-claim-modal";
 
 export const dynamic = "force-dynamic";
 
-type SettlementRow = {
-  settlement_name: string;
-  nation_name: string | null;
-  x: number | string | null;
-  z: number | string | null;
-  discord: string | null;
+type ClaimsRow = {
+  id: number;
+  name: string;
+  parent_claim: number | null;
+  coord_x: number | string | null;
+  coord_z: number | string | null;
+  discord_url: string | null;
   description?: string | null;
   member_count?: number | null;
-  active?: boolean | null;
+  is_active?: boolean | null;
   tags?: string[] | null;
-  size?: "small" | "medium" | "large" | null;
-  net_worth_diamonds?: number | null; // optional if available in view
-  flag_url?: string | null; // optional if available in view
-  updated_at?: string | null; // optional if available in view
+  diamond_count?: number | null;
+  image_url?: string | null;
+  updated_at?: string | null;
 };
+
+function resolveClaimImageUrl(src: string | null | undefined) {
+  if (!src) return "/images/default_settlement.jpg";
+  if (/^https?:\/\//i.test(src)) return src;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return "/images/default_settlement.jpg";
+  const encoded = encodeURI(src);
+  return `${base}/storage/v1/object/public/${encoded}`;
+}
 
 const TAGS = [
   { key: "newbie", label: "✨ Newbie friendly" },
@@ -42,21 +45,37 @@ const TAGS = [
   { key: "pvp", label: "⚔️ PvP" },
 ] as const;
 
-async function fetchSettlements(): Promise<SettlementRow[]> {
+async function fetchSettlements(): Promise<ClaimsRow[]> {
   const sb = getSupabaseBrowser();
   const { data, error } = await sb
-    .from("settlements_readonly")
-    .select("*")
-    .order("settlement_name", { ascending: true });
+    .from("claims")
+    .select("id,name,parent_claim,coord_x,coord_z,discord_url,description,member_count,is_active,tags,diamond_count,image_url,updated_at")
+    .eq("claim_type", "SETTLEMENT")
+    .order("name", { ascending: true });
   if (error) throw new Error("Failed to load settlements");
-  return (data ?? []) as SettlementRow[];
+  return (data ?? []) as ClaimsRow[];
 }
 
 async function fetchNations(): Promise<{ id: string | number; nation_name: string }[]> {
   const sb = getSupabaseBrowser();
-  const { data, error } = await sb.from("nations").select("id,nation_name").order("nation_name");
+  const { data, error } = await sb
+    .from("claims")
+    .select("id,name")
+    .eq("claim_type", "NATION")
+    .order("name");
   if (error) return [];
-  return (data ?? []) as { id: string | number; nation_name: string }[];
+  return (data ?? []).map((r: any) => ({ id: r.id, nation_name: r.name }));
+}
+
+async function fetchClaims(): Promise<ClaimsRow[]> {
+  const sb = getSupabaseBrowser();
+  const { data, error } = await sb
+    .from("claims")
+    .select("*")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+  if (error) throw new Error("Failed to load claims");
+  return (data ?? []) as ClaimsRow[];
 }
 
 async function getRequestor() {
@@ -137,22 +156,21 @@ export default function SettlementsPage() {
   const [q, setQ] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedSizes] = useState<string[]>([]);
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [claimType, setClaimType] = useState<"NATION" | "SETTLEMENT">("SETTLEMENT");
+  const [chooserOpen, setChooserOpen] = useState(false);
 
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [mode, setMode] = useState<"chooser" | "nation" | "settlement" | "login">("chooser");
-
-  const { data, isLoading, isError } = useQuery({ queryKey: ["settlements"], queryFn: fetchSettlements });
+  const { data, isLoading, isError } = useQuery({ queryKey: ["claims"], queryFn: fetchClaims });
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return (data ?? []).filter((row) => {
       const matchesQuery =
         !query ||
-        (row.settlement_name ?? "").toLowerCase().includes(query) ||
-        (row.nation_name ?? "").toLowerCase().includes(query);
+        (row.name ?? "").toLowerCase().includes(query);
 
-      const rowTags = (row.tags ?? []).map((t) => t.toLowerCase());
-      const rowSize = (row.size ?? "").toString().toLowerCase();
+      const rowTags = (row.tags ?? []).map((t) => String(t).toLowerCase());
+      const rowSize = ""; // removed size; not in new schema
 
       const matchesTags =
         selectedTags.length === 0 || selectedTags.every((t) => rowTags.includes(t));
@@ -167,19 +185,19 @@ export default function SettlementsPage() {
   // Default sorting: active first, then by net worth (fallback to member_count)
   const sorted = useMemo(() => {
     const arr = [...filtered];
-    function getNetWorth(row: SettlementRow): number {
-      const n = typeof row.net_worth_diamonds === "number" ? row.net_worth_diamonds : (row.member_count ?? 0);
+    function getNetWorth(row: ClaimsRow): number {
+      const n = typeof row.diamond_count === "number" ? row.diamond_count : (row.member_count ?? 0);
       return n || 0;
     }
     arr.sort((a, b) => {
-      const aActive = Boolean(a.active);
-      const bActive = Boolean(b.active);
+      const aActive = Boolean(a.is_active);
+      const bActive = Boolean(b.is_active);
       if (aActive !== bActive) return aActive ? -1 : 1;
       const bnw = getNetWorth(b) - getNetWorth(a);
       if (bnw !== 0) return bnw;
-      const an = (a.nation_name ?? "").localeCompare(b.nation_name ?? "");
+      const an = (a.name ?? "").localeCompare(b.name ?? "");
       if (an !== 0) return an;
-      return (a.settlement_name ?? "").localeCompare(b.settlement_name ?? "");
+      return (a.name ?? "").localeCompare(b.name ?? "");
     });
     return arr;
   }, [filtered]);
@@ -246,8 +264,7 @@ export default function SettlementsPage() {
                 <button
                   className="underline text-blue-600 hover:text-blue-700"
                   onClick={() => {
-                    setMode("chooser");
-                    setRegisterOpen(true);
+                    setChooserOpen(true);
                   }}
                 > 
                   Click here to register your own.
@@ -256,8 +273,7 @@ export default function SettlementsPage() {
                 <button
                   className="underline text-blue-600 hover:text-blue-700"
                   onClick={() => {
-                    setMode("login");
-                    setRegisterOpen(true);
+                    setChooserOpen(true);
                   }}
                 > 
                   Click here to register your own.
@@ -279,23 +295,23 @@ export default function SettlementsPage() {
         ) : (
           <div className="mx-auto w-full max-w-6xl grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {sorted.map((row) => {
-              const x = toNumber(row.x);
-              const z = toNumber(row.z);
-              const discordUrl = normalizeDiscord(row.discord);
-              const active = row.active ?? false;
+              const x = toNumber(row.coord_x);
+              const z = toNumber(row.coord_z);
+              const discordUrl = normalizeDiscord(row.discord_url);
+              const active = row.is_active ?? false;
               const memberCount = row.member_count ?? undefined;
-              const netWorthDiamonds = row.net_worth_diamonds ?? 0;
+              const netWorthDiamonds = row.diamond_count ?? 0;
               const tags = row.tags ?? [];
-              const nation = row.nation_name ?? "Unknown";
-              const settlement = row.settlement_name ?? "Unknown";
-              const flagUrl = row.flag_url ?? null;
+              const nation = ""; // parent shown elsewhere if needed
+              const settlement = row.name ?? "Unknown";
+              const flagUrl = row.image_url ?? null;
               const updatedAt = row.updated_at;
               return (
-                <div key={`${row.settlement_name}-${x}-${z}`} className="group rounded-xl border bg-background overflow-hidden transition hover:shadow-lg">
+                <div key={`${row.name}-${x}-${z}`} className="group rounded-xl border bg-background overflow-hidden transition hover:shadow-lg">
                   {/* Top banner with flag (fallback gradient) */}
                   <div className="relative aspect-[16/8] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
                     {flagUrl ? (
-                      <Image src={flagUrl} alt={`${nation} flag`} fill className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
+                      <Image src={resolveClaimImageUrl(flagUrl)} alt={`${settlement} flag`} fill className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
                     ) : (
                       <Image src="/images/default_settlement.jpg" alt="Default settlement" fill className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:scale-105" />
                     )}
@@ -346,11 +362,11 @@ export default function SettlementsPage() {
                           rel="noopener noreferrer"
                           className="h-8 px-3 rounded-md border inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 transition"
                         >
-                          Join {nation.length > 10 ? nation.slice(0, 10) + "..." : nation} Discord
+                          Join {settlement.length > 10 ? settlement.slice(0, 10) + "..." : settlement} Discord
                         </a>
                       ) : (
                         <button className="h-8 px-3 rounded-md border opacity-60 cursor-not-allowed">
-                          Join {nation.length > 10 ? nation.slice(0, 10) + "..." : nation} Discord
+                          Join {settlement.length > 10 ? settlement.slice(0, 10) + "..." : settlement} Discord
                         </button>
                       )}
                     </div>
@@ -364,380 +380,51 @@ export default function SettlementsPage() {
         {/* Footer note */}
         <div className="text-center text-[11px] sm:text-xs text-muted-foreground">Live data from the community • Verified with Discord</div>
 
-        {/* Register modal remains functional */}
-        <RegisterModal open={registerOpen} onOpenChange={setRegisterOpen} mode={mode} setMode={setMode} />
-      </div>
-    </div>
-  );
-}
+        {/* New Create Claim modal */}
+        <CreateClaimModal
+          open={claimModalOpen}
+          onOpenChange={setClaimModalOpen}
+          defaultClaimType={claimType}
+          onCreated={() => { /* could refresh list if needed */ }}
+        />
 
-function RegisterModal({ open, onOpenChange, mode, setMode }: { open: boolean; onOpenChange: (v: boolean) => void; mode: "chooser" | "nation" | "settlement" | "login"; setMode: (m: "chooser" | "nation" | "settlement" | "login") => void }) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        {mode === "chooser" ? (
-          <div className="space-y-4">
+        {/* Chooser dialog */}
+        <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+          <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>Register your community</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button className="h-10 bg-blue-500 hover:bg-blue-600 text-white" onClick={() => setMode("nation")}>Register Nation</Button>
-              <Button className="h-10 bg-blue-500 hover:bg-blue-600 text-white" onClick={() => setMode("settlement")}>Register Settlement</Button>
-            </div>
-          </div>
-        ) : mode === "nation" ? (
-          <RegisterNation onDone={() => onOpenChange(false)} onBack={() => setMode("chooser")} />
-        ) : mode === "settlement" ? (
-          <RegisterSettlement onDone={() => onOpenChange(false)} onBack={() => setMode("chooser")} />
-        ) : (
-          // login button
-          <div className="flex flex-col items-center justify-center gap-2">
-            <span className="text-sm text-muted-foreground">Please log in with Discord to register a nation or settlement.</span>
-            <AuthButton />
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function RegisterNation({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [name, setName] = useState("");
-  const [x, setX] = useState("");
-  const [z, setZ] = useState("");
-  const [description, setDescription] = useState("");
-  const [discord, setDiscord] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [authAlert, setAuthAlert] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [flagFile, setFlagFile] = useState<File | null>(null);
-  const [flagPreview, setFlagPreview] = useState<string | null>(null);
-
-  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.currentTarget.files?.[0] ?? null;
-    setFlagFile(file);
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setFlagPreview(url);
-    } else {
-      setFlagPreview(null);
-    }
-  }
-
-  async function submit() {
-    setError(null);
-    setSuccess(null);
-    setAuthAlert(false);
-    toast.info("Submitting nation for review…");
-    startTransition(async () => {
-      try {
-        const req = await getRequestor();
-        if (!req) {
-          setAuthAlert(true);
-          return;
-        }
-        const sb = getSupabaseBrowser();
-
-        // Upload the flag to storage, with the applcation id as the filename
-        let fullFlagUrl: string | null = null;
-        if (flagFile) {
-          const { data: flagUrl, error: flagError } = await sb.storage.from("settlement-images/nations").upload(`${Date.now()}-${name.trim()}.png`, flagFile);
-          if (flagError) {
-            console.warn("Storage error uploading flag", flagError.message);
-            setError("Failed to upload flag. Please try again later.");
-            return;
-          }
-          fullFlagUrl = flagUrl.fullPath;
-        }
-
-        const payload = {
-          kind: "nation" as const,
-          data: {
-            nation_name: name.trim(),
-            description: description.trim() || null,
-            x: x.trim() || null,
-            z: z.trim() || null,
-            discord: discord.trim() || null,
-            flag_url: fullFlagUrl || null,
-          },
-          requestor: req,
-        };
-
-        const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
-        if (fxError) {
-          console.warn("submit-application nation failed", fxError.message);
-          setError("Failed to submit application. Please try again later.");
-          return;
-        }
-        setSuccess("Application submitted for review.");
-        toast.success("Nation submitted. Our team will review it soon.");
-        onDone();
-      } catch (e) {
-        console.warn("Unexpected submit-application error (nation)", (e as Error)?.message ?? String(e));
-        setError("Failed to submit application. Please try again later.");
-        toast.error("Failed to submit nation.");
-      }
-    });
-  }
-
-  return (
-    <div className="space-y-3">
-      <DialogHeader>
-        <DialogTitle>Register Nation</DialogTitle>
-      </DialogHeader>
-      {authAlert ? (
-        <Alert>
-          <AlertTitle>Sign in required</AlertTitle>
-          <AlertDescription>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm">Please log in with Discord to register a nation.</span>
-              <AuthButton />
-            </div>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {error ? <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div> : null}
-      {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
-      <div className="grid gap-2">
-        <Label htmlFor="nation-name">Nation name</Label>
-        <Input id="nation-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nation name..."/>
-      </div>
-      <div className="grid gap-2 max-h-40 overflow-y-auto">
-        <Label htmlFor="nd">Description</Label>
-        <Textarea id="nd" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your nation..." />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="grid gap-2">
-          <Label htmlFor="nx">X Coord</Label>
-          <Input id="nx" type="number" min="-20000" max="20000" value={x} onChange={(e) => setX(e.target.value)} placeholder="1234" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="nz">Z Coord</Label>
-          <Input id="nz" type="number" min="-20000" max="20000" value={z} onChange={(e) => setZ(e.target.value)} placeholder="1234" />
-        </div>
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="ndu">Discord Invite Link</Label>
-        <Input id="ndu" value={discord} onChange={(e) => setDiscord(e.target.value)} placeholder="https://discord.gg/hpgK2ebH9g"/>
-      </div>
-      <div className="grid gap-2">
-        <Label>Upload nation thumbnail</Label>
-        <input ref={fileInputRef} id="flag" type="file" accept="image/png, image/jpeg, image/jpg" className="hidden" onChange={onPickFile} />
-        <label htmlFor="flag" className="cursor-pointer">
-          <div className="rounded-lg border bg-white text-slate-900 p-4 hover:bg-slate-50 transition grid gap-3">
-            <div className="flex items-center gap-3">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-white">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden>
-                  <path d="M12 3l4 4h-3v6h-2V7H8l4-4zm-7 8h2v7h10v-7h2v9H5v-9z"/>
-                </svg>
-              </div>
-              <div className="text-sm">
-                <div className="font-medium">Click to select an image</div>
-                <div className="text-xs text-muted-foreground">PNG, JPG, or JPEG. 5MB max.</div>
-              </div>
-            </div>
-            {flagFile ? (
-              <div className="grid gap-2">
-                <div className="text-xs text-muted-foreground">Selected: {flagFile.name}</div>
-                {flagPreview ? (
-                  <div className="relative h-28 w-full overflow-hidden rounded border bg-muted/40">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={flagPreview} alt="Preview" className="absolute inset-0 h-full w-full object-cover" />
-                  </div>
-                ) : null}
+            {!user ? (
+              <div className="mb-3">
+                <div className="text-sm text-muted-foreground mb-2">Please log in with Discord to continue.</div>
+                <AuthButton />
               </div>
             ) : null}
-          </div>
-        </label>
-      </div>
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onBack}>Back</Button>
-        <Button onClick={submit} disabled={isPending || !name.trim()}>Submit</Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={() => {
+                  setClaimType("NATION");
+                  setChooserOpen(false);
+                  setClaimModalOpen(true);
+                }}
+              >
+                Register Nation
+              </Button>
+              <Button
+                className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={() => {
+                  setClaimType("SETTLEMENT");
+                  setChooserOpen(false);
+                  setClaimModalOpen(true);
+                }}
+              >
+                Register Settlement
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
 }
-
-function RegisterSettlement({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [nationOpen, setNationOpen] = useState(false);
-  const [nationId, setNationId] = useState<string | number | null>(null);
-  const [nationName, setNationName] = useState("");
-  const [settlementName, setSettlementName] = useState("");
-  const [x, setX] = useState("");
-  const [z, setZ] = useState("");
-  const [discord, setDiscord] = useState("");
-  const [description, setDescription] = useState("");
-  const [memberCount, setMemberCount] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [authAlert, setAuthAlert] = useState(false);
-
-  const { data: nations } = useQuery({ queryKey: ["nations"], queryFn: fetchNations });
-
-  function toggleTag(key: string) {
-    setSelectedTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-  }
-
-  function calculatedSize(): "small" | "medium" | "large" | null {
-    const n = Number(memberCount);
-    if (!Number.isFinite(n)) return null;
-    if (n < 30) return "small";
-    if (n < 100) return "medium";
-    return "large";
-  }
-
-  async function submit() {
-    setError(null);
-    setSuccess(null);
-    setAuthAlert(false);
-    toast.info("Submitting settlement for review…");
-    startTransition(async () => {
-      try {
-        const req = await getRequestor();
-        if (!req) {
-          setAuthAlert(true);
-          return;
-        }
-        const sb = getSupabaseBrowser();
-        const payload = {
-          kind: "settlement" as const,
-          data: {
-            settlement_name: settlementName.trim(),
-            nation_name: nationName.trim() || null,
-            x: x.trim() || null,
-            z: z.trim() || null,
-            discord: discord.trim() || null,
-            description: description.trim() || null,
-            member_count: memberCount ? Number(memberCount) : null,
-            tags: selectedTags.length ? selectedTags : null,
-            size: calculatedSize(),
-          },
-          requestor: req,
-        };
-        const { error: fxError } = await sb.functions.invoke("submit-application", { body: payload });
-        if (fxError) {
-          console.warn("submit-application settlement failed", fxError.message);
-          setError("Failed to submit application. Please try again later.");
-          return;
-        }
-        setSuccess("Application submitted for review.");
-        toast.success("Settlement submitted. Our team will review it soon.");
-        onDone();
-      } catch (e) {
-        console.warn("Unexpected submit-application error (settlement)", (e as Error)?.message ?? String(e));
-        setError("Failed to submit application. Please try again later.");
-        toast.error("Failed to submit settlement.");
-      }
-    });
-  }
-
-  return (
-    <div className="space-y-3">
-      <DialogHeader>
-        <DialogTitle>Register Settlement</DialogTitle>
-      </DialogHeader>
-      {authAlert ? (
-        <Alert>
-          <AlertTitle>Sign in required</AlertTitle>
-          <AlertDescription>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm">Please log in with Discord to register a settlement.</span>
-              <AuthButton />
-            </div>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {error ? <div className="rounded-md border border-red-200 bg-red-50 text-red-800 px-3 py-2 text-sm">{error}</div> : null}
-      {success ? <div className="rounded-md border border-green-200 bg-green-50 text-green-800 px-3 py-2 text-sm">{success}</div> : null}
-
-      <div className="grid gap-2">
-        <Label>Nation</Label>
-        <Popover open={nationOpen} onOpenChange={setNationOpen} modal>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={nationId ? "justify-between" : "justify-between text-muted-foreground"}>
-              {nationId ? nations?.find((n) => String(n.id) === String(nationId))?.nation_name ?? "Select nation" : "Select nation"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-sm max-h-80 overflow-y-auto" align="start">
-            <Command>
-              <CommandInput placeholder="Search nations..." />
-              <CommandEmpty>No nations found.</CommandEmpty>
-              <CommandList className="max-h-72 overflow-y-auto">
-                <CommandGroup>
-                  {nations?.map((n) => (
-                    <CommandItem
-                      key={String(n.id)}
-                      value={n.nation_name}
-                      onSelect={() => {
-                        setNationId(n.id);
-                        setNationName(n.nation_name);
-                        setNationOpen(false);
-                      }}
-                    >
-                      {n.nation_name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="sname">Settlement name</Label>
-        <Input id="sname" value={settlementName} onChange={(e) => setSettlementName(e.target.value)} placeholder="Settlement name..."/>
-      </div>
-
-      <div className="grid gap-2 max-h-40 overflow-y-auto">
-        <Label htmlFor="sdesc">Description</Label>
-        <Textarea id="sdesc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your settlement..." />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="grid gap-2">
-          <Label htmlFor="sx">X Coord</Label>
-          <Input id="sx" type="number" min="-20000" max="20000" value={x} onChange={(e) => setX(e.target.value)} placeholder="1234" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="sz">Z Coord</Label>
-          <Input id="sz" type="number" min="-20000" max="20000" value={z} onChange={(e) => setZ(e.target.value)} placeholder="1234" />
-        </div>
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="sdiscord">Discord Invite Link</Label>
-        <Input id="sdiscord" value={discord} onChange={(e) => setDiscord(e.target.value)} placeholder="https://discord.gg/hpgK2ebH9g"/>
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="smemb">Member count (estimate)</Label>
-        <Input id="smemb" type="number" min="0" value={memberCount} onChange={(e) => setMemberCount(e.target.value)} />
-      </div>
-
-      <div className="grid gap-2">
-        <Label>Tags</Label>
-        <div className="flex flex-wrap gap-2">
-          {TAGS.map((t) => (
-            <button
-              key={t.key}
-              className={`h-8 px-3 rounded-md border text-sm ${selectedTags.includes(t.key) ? "bg-muted" : "bg-background"}`}
-              onClick={() => toggleTag(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onBack}>Back</Button>
-        <Button onClick={submit} disabled={isPending || !settlementName.trim() || !nationName.trim()}>Submit</Button>
-      </div>
-    </div>
-  );
-} 

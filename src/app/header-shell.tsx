@@ -20,7 +20,7 @@ export default function HeaderShell() {
           <div className="flex items-center gap-4 text-sm">
             <Link href="/marketplace">Marketplace</Link>
             <Link href="/contracts">Contracts</Link>
-            <Link href="/settlements">Settlements</Link>
+            <Link href="/claims">Claims</Link>
 
             {/* Disabled: WIP, make muted and unclickable and subscript text saying coming soon */}
             {process.env.NEXT_PUBLIC_ALLOW_WIP_ROUTES === "true" ? (

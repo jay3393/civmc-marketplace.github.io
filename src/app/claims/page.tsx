@@ -159,6 +159,8 @@ export default function SettlementsPage() {
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [claimType, setClaimType] = useState<"NATION" | "SETTLEMENT">("SETTLEMENT");
   const [chooserOpen, setChooserOpen] = useState(false);
+  type SortKey = "updated" | "name" | "members" | "networth";
+  const [sortKey, setSortKey] = useState<SortKey>("updated");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["claims"], queryFn: fetchClaims });
 
@@ -182,7 +184,7 @@ export default function SettlementsPage() {
     });
   }, [data, q, selectedTags, selectedSizes]);
 
-  // Default sorting: active first, then by net worth (fallback to member_count)
+  // Default sorting or by selected key
   const sorted = useMemo(() => {
     const arr = [...filtered];
     function getNetWorth(row: ClaimsRow): number {
@@ -190,17 +192,24 @@ export default function SettlementsPage() {
       return n || 0;
     }
     arr.sort((a, b) => {
-      const aActive = Boolean(a.is_active);
-      const bActive = Boolean(b.is_active);
-      if (aActive !== bActive) return aActive ? -1 : 1;
-      const bnw = getNetWorth(b) - getNetWorth(a);
-      if (bnw !== 0) return bnw;
-      const an = (a.name ?? "").localeCompare(b.name ?? "");
-      if (an !== 0) return an;
-      return (a.name ?? "").localeCompare(b.name ?? "");
+      if (sortKey === "name") {
+        return (a.name ?? "").localeCompare(b.name ?? "");
+      }
+      if (sortKey === "members") {
+        const am = (a.member_count ?? 0) as number;
+        const bm = (b.member_count ?? 0) as number;
+        return bm - am; // desc
+      }
+      if (sortKey === "networth") {
+        return (b.diamond_count ?? 0) - (a.diamond_count ?? 0); // desc
+      }
+      // updated
+      const au = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const bu = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return bu - au; // desc
     });
     return arr;
-  }, [filtered]);
+  }, [filtered, sortKey]);
 
   function toggleTag(key: string) {
     setSelectedTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -216,13 +225,13 @@ export default function SettlementsPage() {
           <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-cyan-500/30 blur-3xl"/>
           <div className="relative p-6 sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/90">
-              Settlements • Nations • Community
+              Claims • Nations • Settlements • Community
             </div>
             <h1 className="mt-3 text-2xl sm:text-4xl font-semibold tracking-tight text-white">
-              Discover thriving nations and showcase your power
+              Discover and register your claims.
             </h1>
             <p className="mt-2 max-w-2xl text-sm sm:text-base text-white/80">
-              Join the civ-wide network of settlements. Show members, activity and recruit.
+              Claim your civilization and help grow the community. Register or find your nation.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1"><ActiveDot active={true}/> Active communities</span>
@@ -245,42 +254,50 @@ export default function SettlementsPage() {
                 aria-label="Search settlements"
               />
             </div>
-            <div className="inline-flex flex-wrap gap-2">
+            <button
+              aria-label="Search"
+              onClick={() => {/* trigger existing search state; search is live-bound to q */}}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md border bg-white text-slate-900 shadow-sm hover:bg-slate-50"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-2">
+            <div className="mr-auto">
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-md border bg-white px-3 text-sm text-slate-900 shadow-sm hover:bg-slate-50"
+                onClick={() => setChooserOpen(true)}
+              >
+                Register claim
+              </button>
+            </div>
+            <div className="inline-flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-muted-foreground">Filter by tag:</span>
               {TAGS.map((t) => (
                 <button
                   key={t.key}
                   onClick={() => toggleTag(t.key)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${selectedTags.includes(t.key) ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-700 border-slate-200"}`}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${selectedTags.includes(t.key) ? "bg-emerald-500 text-slate-50 border-emerald-200" : "bg-emerald-50 text-slate-700 border-slate-200"}`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-          </div>
-          <div className="flex flex-row gap-2 justify-start mt-2">
-            <div className="text-center text-sm">
-              Don&apos;t see your nation/settlement?{' '}
-              { user ? 
-                <button
-                  className="underline text-blue-600 hover:text-blue-700"
-                  onClick={() => {
-                    setChooserOpen(true);
-                  }}
-                > 
-                  Click here to register your own.
-                </button>
-              : 
-                <button
-                  className="underline text-blue-600 hover:text-blue-700"
-                  onClick={() => {
-                    setChooserOpen(true);
-                  }}
-                > 
-                  Click here to register your own.
-                </button>
-            }
-
-              
+            <div className="ml-auto inline-flex items-center gap-2">
+              <label htmlFor="claims-sort" className="text-xs text-muted-foreground">Sort</label>
+              <select
+                id="claims-sort"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+                aria-label="Sort claims"
+              >
+                <option value="updated">Last updated</option>
+                <option value="name">Name (A–Z)</option>
+                <option value="members">Members (desc)</option>
+                <option value="networth">Net worth (diamonds)</option>
+              </select>
+              <button onClick={() => { setQ(""); setSelectedTags([]); setSortKey("updated"); }} className="h-8 rounded-md border bg-background px-2 text-xs">Clear</button>
             </div>
           </div>
         </div>

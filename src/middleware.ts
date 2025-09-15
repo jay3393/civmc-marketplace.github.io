@@ -38,7 +38,8 @@ function isAlphaGated(pathname: string) {
     pathname.startsWith('/shop') ||
     pathname.startsWith('/my-shops') ||
     pathname.startsWith('/contracts') ||
-    pathname.startsWith('/settlements')
+    pathname.startsWith('/settlements') || 
+    pathname.startsWith('/claims')
   )
 }
 

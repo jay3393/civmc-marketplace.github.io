@@ -36,10 +36,10 @@ export default function Home() {
             Organize and discover server events with date, time, and location.
           </p>
         </Link>) : null}
-        <Link href="/settlements" className="rounded-lg border p-6 hover:bg-muted/50 transition">
-          <div className="text-xl font-semibold mb-2">Settlements</div>
+        <Link href="/claims" className="rounded-lg border p-6 hover:bg-muted/50 transition">
+          <div className="text-xl font-semibold mb-2">Claims</div>
           <p className="text-sm text-muted-foreground">
-            Register your settlement and explore others across CivHub.
+            Register your claims and explore nations and settlements across CivHub.
           </p>
         </Link>
       </div>
